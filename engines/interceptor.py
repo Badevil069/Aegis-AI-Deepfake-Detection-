@@ -47,3 +47,53 @@ class LiveStreamInterceptor:
         self.is_running = False
         if self.cap:
             self.cap.release()
+
+# --- WebRTC Extensions ---
+try:
+    from av import VideoFrame, AudioFrame
+    import pydub
+    from collections import deque
+    WEBRTC_AVAILABLE = True
+except ImportError:
+    WEBRTC_AVAILABLE = False
+
+if WEBRTC_AVAILABLE:
+    class WebRTCVideoProcessor:
+        def __init__(self):
+            # Keep a buffer of recent frames to analyze sequentially without blocking the stream
+            self.frame_buffer = deque(maxlen=5)
+
+        def recv(self, frame: VideoFrame) -> VideoFrame:
+            img = frame.to_ndarray(format="bgr24")
+            # Push frame to buffer to be analyzed asynchronously by Streamlit loop
+            self.frame_buffer.append(img)
+            return frame # Pass the frame through unaffected for mirroring
+
+    class WebRTCAudioProcessor:
+        def __init__(self):
+            self.audio_frames = deque(maxlen=50) # Buffer approx 1 second of audio stream
+            
+        def recv(self, frame: AudioFrame) -> AudioFrame:
+            sound = pydub.AudioSegment(
+                data=frame.to_ndarray().tobytes(),
+                sample_width=frame.format.bytes,
+                frame_rate=frame.sample_rate,
+                channels=len(frame.layout.channels),
+            )
+            # Store audio chunk
+            self.audio_frames.append(sound)
+            return frame
+
+        def get_1_second_chunk(self):
+            """Combines buffered audio frames into a single webm/mp3 blob for Vertex AI."""
+            if len(self.audio_frames) == 0:
+                return None
+            
+            combined = self.audio_frames[0]
+            for i in range(1, len(self.audio_frames)):
+                combined += self.audio_frames[i]
+                
+            exported = combined.export(format="mp3")
+            raw_audio = exported.read()
+            self.audio_frames.clear() # Clear buffer after extraction
+            return raw_audio

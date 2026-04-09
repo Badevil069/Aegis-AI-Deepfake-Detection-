@@ -105,3 +105,70 @@ class DetectionLogic:
             "details": details,
             "biometric_baseline_match": biometric_match
         }
+
+    def analyze_audio(self, raw_audio_data):
+        """
+        Analyze a raw audio chunk using Gemini 1.5 Pro to detect AI voice cloning.
+        """
+        if not self.model:
+            return {"is_deepfake": False, "confidence": 0.0, "details": ["Model not initialized."]}
+            
+        try:
+            # We assume raw_audio_data is bytes in a valid format (e.g. mp3/wav)
+            audio_part = Part.from_data(data=raw_audio_data, mime_type="audio/webm")
+            prompt = (
+                "You are an expert deepfake audio detection AI. Analyze the given audio snippet. "
+                "Look for robotic inflections, unnatural breathing patterns, metallic phasing, "
+                "or signs of AI voice cloning. "
+                "Return your findings STRICTLY as a JSON object with the following keys: "
+                "\"is_deepfake\" (boolean), \"confidence\" (float between 0.0 and 1.0), "
+                "\"details\" (list of string findings). Do not include markdown blocks."
+            )
+            response = self.model.generate_content([audio_part, prompt])
+            response_text = response.text.strip()
+            if response_text.startswith('```json'):
+                response_text = response_text.split('```json')[1].split('```')[0].strip()
+            elif response_text.startswith('```'):
+                response_text = response_text.split('```')[1].strip()
+
+            result = json.loads(response_text)
+            return {
+                "is_deepfake": result.get("is_deepfake", False),
+                "confidence": result.get("confidence", 0.5),
+                "details": result.get("details", ["Audio analysis complete."])
+            }
+        except Exception as e:
+            return {"is_deepfake": False, "confidence": 0.0, "details": [f"Voice AI Error: {str(e)}"]}
+
+    def analyze_static_image(self, image_bytes):
+        """
+        Analyze a static image upload directly for deepfake artifacts using Gemini 1.5 Pro.
+        """
+        if not self.model:
+            return {"is_deepfake": False, "confidence": 0.0, "details": ["Model not initialized."]}
+            
+        try:
+            image_part = Part.from_data(data=image_bytes, mime_type="image/jpeg")
+            prompt = (
+                "You are a forensic investigator. Check this static image for AI generation "
+                "manipulations. Look for six-fingered hands, smudged backgrounds, illogical "
+                "geometry, or typical GAN/Midjourney artifacts. "
+                "Return your findings STRICTLY as a JSON object with the following keys: "
+                "\"is_deepfake\" (boolean), \"confidence\" (float between 0.0 and 1.0), "
+                "\"details\" (list of string findings). Do not include markdown."
+            )
+            response = self.model.generate_content([image_part, prompt])
+            response_text = response.text.strip()
+            if response_text.startswith('```json'):
+                response_text = response_text.split('```json')[1].split('```')[0].strip()
+            elif response_text.startswith('```'):
+                response_text = response_text.split('```')[1].strip()
+
+            result = json.loads(response_text)
+            return {
+                "is_deepfake": result.get("is_deepfake", False),
+                "confidence": result.get("confidence", 0.5),
+                "details": result.get("details", ["Static image scan complete."])
+            }
+        except Exception as e:
+            return {"is_deepfake": False, "confidence": 0.0, "details": [f"Visual AI Error: {str(e)}"]}
