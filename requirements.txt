@@ -1,0 +1,7 @@
+streamlit
+opencv-python-headless
+streamlink
+google-cloud-vision
+google-cloud-pubsub
+google-cloud-aiplatform
+python-dotenv

@@ -1,0 +1,24 @@
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Streamlit
+.streamlit/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Secret Keys
+*_key.json
+*.json
+
+# Jupyter Notebook
+.ipynb_checkpoints

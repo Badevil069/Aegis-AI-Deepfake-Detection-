@@ -1,0 +1,120 @@
+/* Aura Aegis Custom Theme: Glassmorphism / Deep Obsidian */
+:root {
+    --obsidian: #0f172a;
+    --glass-bg: rgba(30, 41, 59, 0.6);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --cyan-accent: #00f0ff;
+    --violet-accent: #8b5cf6;
+    --magma-accent: #f43f5e;
+    --text-light: #f8fafc;
+}
+
+.stApp {
+    background-color: var(--obsidian);
+    color: var(--text-light);
+    background-image: radial-gradient(circle at 50% 0%, rgba(139, 92, 246, 0.15), transparent 50%),
+                        radial-gradient(circle at 10% 100%, rgba(0, 240, 255, 0.1), transparent 50%);
+    font-family: 'Inter', sans-serif;
+}
+
+/* Styling Streamlit UI to look like Frosted Glass panels */
+div[data-testid="stVerticalBlock"] > div > div[data-testid="stVerticalBlock"] {
+    background: var(--glass-bg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+/* Customize Headers */
+h1, h2, h3 {
+    color: var(--text-light);
+    text-shadow: 0 0 10px rgba(255,255,255,0.2);
+    font-weight: 700;
+}
+
+/* Buttons */
+.stButton>button {
+    background: linear-gradient(135deg, var(--cyan-accent) 0%, var(--violet-accent) 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 0.5rem 2rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    box-shadow: 0 0 15px rgba(0, 240, 255, 0.4);
+    transition: all 0.3s ease;
+}
+
+.stButton>button:hover {
+    box-shadow: 0 0 25px rgba(139, 92, 246, 0.6);
+    transform: translateY(-2px);
+}
+
+/* Custom glow text classes to be used in st.markdown */
+.glow-cyan { color: var(--cyan-accent); text-shadow: 0 0 8px var(--cyan-accent); }
+.glow-violet { color: var(--violet-accent); text-shadow: 0 0 8px var(--violet-accent); }
+.glow-magma { color: var(--magma-accent); text-shadow: 0 0 8px var(--magma-accent); }
+
+/* The Oracle HUD Animation */
+.oracle-circle {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    font-weight: bold;
+    transition: all 0.5s ease;
+}
+
+.oracle-status-safe {
+    border: 4px solid var(--cyan-accent);
+    box-shadow: 0 0 30px var(--cyan-accent), inset 0 0 20px var(--cyan-accent);
+    animation: pulse-cyan 2s infinite;
+}
+
+.oracle-status-warning {
+    border: 4px solid var(--violet-accent);
+    box-shadow: 0 0 30px var(--violet-accent), inset 0 0 20px var(--violet-accent);
+    animation: pulse-violet 1.5s infinite;
+}
+
+.oracle-status-danger {
+    border: 4px solid var(--magma-accent);
+    box-shadow: 0 0 40px var(--magma-accent), inset 0 0 30px var(--magma-accent);
+    animation: pulse-magma 1s infinite alternate;
+}
+
+@keyframes pulse-cyan {
+    0% { box-shadow: 0 0 20px var(--cyan-accent), inset 0 0 10px var(--cyan-accent); }
+    50% { box-shadow: 0 0 40px var(--cyan-accent), inset 0 0 20px var(--cyan-accent); }
+    100% { box-shadow: 0 0 20px var(--cyan-accent), inset 0 0 10px var(--cyan-accent); }
+}
+@keyframes pulse-violet {
+    0% { box-shadow: 0 0 20px var(--violet-accent), inset 0 0 10px var(--violet-accent); }
+    50% { box-shadow: 0 0 40px var(--violet-accent), inset 0 0 20px var(--violet-accent); }
+    100% { box-shadow: 0 0 20px var(--violet-accent), inset 0 0 10px var(--violet-accent); }
+}
+@keyframes pulse-magma {
+    0% { box-shadow: 0 0 20px var(--magma-accent), inset 0 0 10px var(--magma-accent); transform: scale(1); }
+    100% { box-shadow: 0 0 50px var(--magma-accent), inset 0 0 30px var(--magma-accent); transform: scale(1.05); }
+}
+
+/* Terminal Console */
+.terminal-log {
+    font-family: 'Courier New', monospace;
+    background: rgba(0, 0, 0, 0.8);
+    color: #0f0;
+    padding: 10px;
+    border-radius: 5px;
+    height: 200px;
+    overflow-y: auto;
+    font-size: 0.85rem;
+    border: 1px solid #333;
+}
