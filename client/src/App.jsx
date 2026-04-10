@@ -20,10 +20,14 @@ export default function App() {
 
   return (
     <div className="relative min-h-screen overflow-x-hidden bg-app-bg text-slate-100">
+      {/* Animated star field */}
       <div className="app-stars" />
+
+      {/* Gradient orbs */}
       <div className="app-gradient-orb app-gradient-orb-left" />
       <div className="app-gradient-orb app-gradient-orb-right" />
 
+      {/* Main content */}
       <div className="relative z-10">
         {!hideChrome && <Navbar />}
 

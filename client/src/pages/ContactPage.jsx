@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Globe, Mail, MessageCircle, Send } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Globe, Code2, ExternalLink, Mail, MessageCircle, Send, CheckCircle2, MapPin } from 'lucide-react';
 import PageTransition from '../components/PageTransition';
 
 export default function ContactPage() {
@@ -11,90 +12,141 @@ export default function ContactPage() {
   };
 
   return (
-    <PageTransition className="space-y-8 py-10">
+    <PageTransition className="space-y-10 py-12">
+      {/* Header */}
       <section className="text-center">
-        <p className="text-xs uppercase tracking-[0.2em] text-brand-cyan">Contact and About</p>
-        <h1 className="mt-3 font-display text-4xl font-semibold text-white">Mission-Driven Media Trust</h1>
-        <p className="mx-auto mt-3 max-w-3xl text-sm text-slate-300 md:text-base">
+        <div className="mb-3 flex justify-center">
+          <span className="cyber-badge cyber-badge-glow">Contact & About</span>
+        </div>
+        <h1 className="font-display text-4xl font-bold text-white md:text-5xl">
+          Mission-Driven <span className="glow-text">Media Trust</span>
+        </h1>
+        <p className="mx-auto mt-4 max-w-3xl text-base text-slate-400">
           We are building resilient AI safeguards to counter synthetic manipulation and support trusted digital communication.
         </p>
       </section>
 
+      {/* Main content grid */}
       <section className="grid gap-6 lg:grid-cols-12">
-        <div className="glass-card p-6 lg:col-span-5">
-          <h2 className="text-2xl font-semibold text-white">About This Project</h2>
-          <p className="mt-3 text-sm leading-relaxed text-slate-300">
+        {/* About panel */}
+        <div className="glass-card p-7 lg:col-span-5">
+          <h2 className="text-2xl font-bold text-white">About This Project</h2>
+          <p className="mt-3 text-sm leading-relaxed text-slate-400">
             Aegis Sentinel is a premium frontend simulation of an AI cybersecurity platform focused on deepfake detection across uploaded and live media.
           </p>
 
-          <h3 className="mt-6 text-lg font-semibold text-white">Mission Statement</h3>
-          <p className="mt-2 text-sm leading-relaxed text-slate-300">
+          <hr className="section-divider my-6" />
+
+          <h3 className="text-lg font-semibold text-white">Mission Statement</h3>
+          <p className="mt-2 text-sm leading-relaxed text-slate-400">
             Enable organizations and individuals to verify media authenticity at speed, reduce fraud exposure, and improve trust in high-risk communication channels.
           </p>
 
-          <div className="mt-6 space-y-2">
-            <a href="#" className="inline-flex items-center gap-2 text-sm text-slate-300 transition hover:text-white">
-              <Mail className="h-4 w-4 text-brand-cyan" />
+          <hr className="section-divider my-6" />
+
+          {/* Contact info */}
+          <div className="space-y-3">
+            <a href="mailto:support@aegissentinel.ai" className="flex items-center gap-3 text-sm text-slate-400 transition hover:text-brand-cyan">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/8 bg-white/[0.03]">
+                <Mail className="h-4 w-4 text-brand-cyan/60" />
+              </div>
               support@aegissentinel.ai
             </a>
-            <a href="#" className="block text-sm text-slate-400 transition hover:text-slate-200">Status: Simulated frontend environment</a>
+            <div className="flex items-center gap-3 text-sm text-slate-500">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/8 bg-white/[0.03]">
+                <MapPin className="h-4 w-4 text-brand-cyan/60" />
+              </div>
+              Remote-first organization
+            </div>
           </div>
 
-          <div className="mt-6 flex gap-3">
-            <a
-              href="#"
-              className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-white/15 bg-white/5 text-slate-300 transition hover:border-brand-cyan/70 hover:text-white"
-            >
-              <Globe className="h-4 w-4" />
-            </a>
-            <a
-              href="#"
-              className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-white/15 bg-white/5 text-slate-300 transition hover:border-brand-cyan/70 hover:text-white"
-            >
-              <MessageCircle className="h-4 w-4" />
-            </a>
+          {/* Social links */}
+          <div className="mt-6 flex gap-2">
+            {[
+              { icon: Code2, label: 'GitHub' },
+              { icon: ExternalLink, label: 'LinkedIn' },
+              { icon: Globe, label: 'Website' },
+              { icon: MessageCircle, label: 'Discord' },
+            ].map(({ icon: Icon, label }) => (
+              <a
+                key={label}
+                href="#"
+                aria-label={label}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/8 bg-white/[0.03] text-slate-500 transition-all duration-300 hover:border-brand-cyan/30 hover:bg-brand-cyan/5 hover:text-brand-cyan"
+              >
+                <Icon className="h-4 w-4" />
+              </a>
+            ))}
           </div>
         </div>
 
-        <div className="glass-card p-6 lg:col-span-7">
-          <h2 className="text-2xl font-semibold text-white">Contact Form</h2>
-          <p className="mt-2 text-sm text-slate-400">Tell us your use case, integration goals, or enterprise requirements.</p>
+        {/* Contact form */}
+        <div className="glass-card-elevated p-7 lg:col-span-7">
+          <h2 className="text-2xl font-bold text-white">Get in Touch</h2>
+          <p className="mt-2 text-sm text-slate-500">Tell us your use case, integration goals, or enterprise requirements.</p>
 
-          <form onSubmit={handleSubmit} className="mt-6 grid gap-4">
+          <form onSubmit={handleSubmit} className="mt-7 grid gap-4">
             <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <label className="block text-xs font-medium uppercase tracking-wider text-slate-500 mb-2">Name</label>
+                <input
+                  className="cyber-input"
+                  placeholder="Your full name"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium uppercase tracking-wider text-slate-500 mb-2">Email</label>
+                <input
+                  type="email"
+                  className="cyber-input"
+                  placeholder="work@company.com"
+                  required
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium uppercase tracking-wider text-slate-500 mb-2">Organization</label>
               <input
-                className="rounded-xl border border-white/15 bg-black/20 px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-brand-cyan/70 focus:outline-none"
-                placeholder="Your name"
-                required
+                className="cyber-input"
+                placeholder="Company name (optional)"
               />
-              <input
-                type="email"
-                className="rounded-xl border border-white/15 bg-black/20 px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-brand-cyan/70 focus:outline-none"
-                placeholder="Work email"
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium uppercase tracking-wider text-slate-500 mb-2">Message</label>
+              <textarea
+                rows={5}
+                className="cyber-input resize-none"
+                placeholder="How can we help you?"
                 required
               />
             </div>
-            <input
-              className="rounded-xl border border-white/15 bg-black/20 px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-brand-cyan/70 focus:outline-none"
-              placeholder="Organization"
-            />
-            <textarea
-              rows={5}
-              className="rounded-xl border border-white/15 bg-black/20 px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-brand-cyan/70 focus:outline-none"
-              placeholder="How can we help?"
-              required
-            />
-            <button className="cyber-button inline-flex items-center justify-center gap-2 py-3 text-sm" type="submit">
+
+            <button
+              id="contact-submit-btn"
+              className="cyber-button inline-flex items-center justify-center gap-2 py-3.5 text-sm"
+              type="submit"
+            >
               <Send className="h-4 w-4" />
-              Send Message
+              <span>Send Message</span>
             </button>
           </form>
 
-          {submitted && (
-            <p className="mt-4 rounded-xl border border-emerald-400/30 bg-emerald-400/10 px-4 py-3 text-sm text-emerald-200">
-              Thanks. Your message has been queued in this demo interface.
-            </p>
-          )}
+          <AnimatePresence>
+            {submitted && (
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                className="mt-5 flex items-center gap-3 rounded-xl border border-emerald-400/20 bg-emerald-400/5 px-4 py-3 text-sm text-emerald-200"
+              >
+                <CheckCircle2 className="h-5 w-5 shrink-0" />
+                Thanks! Your message has been queued in this demo interface.
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </section>
     </PageTransition>

@@ -16,9 +16,20 @@ __pycache__/
 *$py.class
 *.so
 
-# Secret Keys
-*_key.json
-*.json
+# Secret Keys (Google Cloud credentials)
+engines/*_key.json
 
 # Jupyter Notebook
 .ipynb_checkpoints
+
+# Node
+node_modules/
+client/node_modules/
+client/dist/
+
+# Build artifacts
+*.zip
+
+# OS
+.DS_Store
+Thumbs.db

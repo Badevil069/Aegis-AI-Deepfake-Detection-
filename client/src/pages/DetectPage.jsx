@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Upload } from 'lucide-react';
+import { Upload, ShieldCheck } from 'lucide-react';
 import PageTransition from '../components/PageTransition';
 import UploadCard from '../components/UploadCard';
 
@@ -19,16 +19,32 @@ export default function DetectPage() {
   };
 
   return (
-    <PageTransition className="py-10">
-      <section className="mb-8 text-center">
-        <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-xs uppercase tracking-[0.2em] text-brand-cyan">
-          <Upload className="h-3.5 w-3.5" />
-          Upload Detection Mode
+    <PageTransition className="py-12">
+      <section className="mb-10 text-center">
+        <div className="mb-3 flex justify-center">
+          <span className="cyber-badge cyber-badge-glow">
+            <Upload className="h-3 w-3" />
+            Upload Detection Mode
+          </span>
         </div>
-        <h1 className="mt-4 font-display text-4xl font-semibold text-white">Analyze Video, Image, or Voice Files</h1>
-        <p className="mx-auto mt-3 max-w-2xl text-sm text-slate-300 md:text-base">
+        <h1 className="font-display text-4xl font-bold text-white md:text-5xl">
+          Analyze <span className="glow-text">Video, Image, or Voice</span> Files
+        </h1>
+        <p className="mx-auto mt-4 max-w-2xl text-base text-slate-400">
           Drag and drop evidence, select the detection type, and run a multimodal deepfake scan with simulated forensic output.
         </p>
+
+        {/* Trust indicators */}
+        <div className="mt-5 flex items-center justify-center gap-4 text-xs text-slate-600">
+          <span className="inline-flex items-center gap-1.5">
+            <ShieldCheck className="h-3 w-3 text-brand-cyan/50" />
+            End-to-end encrypted
+          </span>
+          <span className="h-3 w-px bg-slate-700" />
+          <span>Files auto-deleted after analysis</span>
+          <span className="h-3 w-px bg-slate-700" />
+          <span>GDPR compliant</span>
+        </div>
       </section>
 
       <UploadCard onAnalyze={handleAnalyze} />

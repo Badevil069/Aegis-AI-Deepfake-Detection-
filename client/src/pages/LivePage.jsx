@@ -1,22 +1,46 @@
-import { RadioTower } from 'lucide-react';
+import { RadioTower, Shield, Cpu, Wifi } from 'lucide-react';
 import PageTransition from '../components/PageTransition';
-import LiveDetectionPanel from '../components/LiveDetectionPanel';
+import LiveDetectionHub from '../components/live/LiveDetectionHub';
 
 export default function LivePage() {
   return (
-    <PageTransition className="space-y-8 py-10">
+    <PageTransition className="space-y-6 py-8 md:py-12">
+      {/* Page header */}
       <section className="text-center">
-        <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-xs uppercase tracking-[0.2em] text-brand-cyan">
-          <RadioTower className="h-3.5 w-3.5" />
-          Live Stream Detection
+        <div className="mb-3 flex justify-center">
+          <span className="cyber-badge cyber-badge-glow">
+            <RadioTower className="h-3 w-3" />
+            Real-Time Detection
+          </span>
         </div>
-        <h1 className="mt-4 font-display text-4xl font-semibold text-white">Zoom/Meet-Style Real-Time Deepfake Monitoring</h1>
-        <p className="mx-auto mt-3 max-w-2xl text-sm text-slate-300 md:text-base">
-          Simulate participant streams, monitor voice waveform activity, and track a continuously updated risk score.
+        <h1 className="font-display text-4xl font-bold text-white md:text-5xl">
+          Live <span className="glow-text">Deepfake Monitoring</span>
+        </h1>
+        <p className="mx-auto mt-4 max-w-3xl text-base text-slate-400">
+          Real-time multimodal detection across webcam, live streams, and WebRTC video calls.
+          All analysis uses production-grade computer vision — no simulated data.
         </p>
+
+        <div className="mt-5 flex flex-wrap items-center justify-center gap-4 text-xs text-slate-600">
+          <span className="inline-flex items-center gap-1.5">
+            <Shield className="h-3 w-3 text-brand-cyan/50" />
+            End-to-end encrypted
+          </span>
+          <span className="h-3 w-px bg-slate-700" />
+          <span className="inline-flex items-center gap-1.5">
+            <Cpu className="h-3 w-3 text-brand-cyan/50" />
+            OpenCV + Vertex AI
+          </span>
+          <span className="h-3 w-px bg-slate-700" />
+          <span className="inline-flex items-center gap-1.5">
+            <Wifi className="h-3 w-3 text-brand-cyan/50" />
+            WebSocket real-time
+          </span>
+        </div>
       </section>
 
-      <LiveDetectionPanel />
+      {/* Detection hub (all 3 modes) */}
+      <LiveDetectionHub />
     </PageTransition>
   );
 }

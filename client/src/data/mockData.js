@@ -18,38 +18,38 @@ export const homeStats = [
 export const howItWorksSteps = [
   {
     title: 'Upload / Capture',
-    description: 'Ingest image, video, audio, or a live session stream in a secure sandbox.',
+    description: 'Ingest image, video, audio, or a live session stream into a secure sandbox environment with end-to-end encryption.',
   },
   {
-    title: 'AI Analysis',
-    description: 'Multimodal models inspect visual, acoustic, and temporal forensic signals.',
+    title: 'AI Frame & Audio Analysis',
+    description: 'Multimodal neural networks inspect visual, acoustic, and temporal forensic signals across every frame and audio segment.',
   },
   {
-    title: 'Pattern Detection',
-    description: 'The system maps anomalies against known deepfake and voice-cloning signatures.',
+    title: 'Pattern & Anomaly Detection',
+    description: 'The system maps detected anomalies against known deepfake and voice-cloning signatures using ensemble models.',
   },
   {
-    title: 'Result Generation',
-    description: 'A scored report is produced with confidence, insights, and recommended action.',
+    title: 'Deepfake Score Output',
+    description: 'A confidence-weighted score report is generated with insights, severity levels, and recommended remediation steps.',
   },
 ];
 
 export const useCases = [
   {
     title: 'Journalism Verification',
-    description: 'Validate public footage and interview clips before publication.',
+    description: 'Validate public footage, interview clips, and source material before publication to maintain editorial integrity.',
   },
   {
-    title: 'Fraud Detection',
-    description: 'Catch impersonation attempts in onboarding and payment verification flows.',
+    title: 'Banking & Fraud Detection',
+    description: 'Catch impersonation attempts in KYC onboarding, payment verification, and high-value transaction flows.',
   },
   {
     title: 'Social Media Moderation',
-    description: 'Flag synthetic media at scale to protect platform trust.',
+    description: 'Flag synthetic media at scale to protect platform trust, user safety, and regulatory compliance.',
   },
   {
     title: 'Law Enforcement',
-    description: 'Assist forensic review teams with fast anomaly triage and reporting.',
+    description: 'Assist forensic review teams with rapid anomaly triage, evidence chain documentation, and court-ready reporting.',
   },
 ];
 
@@ -62,6 +62,12 @@ export const liveLogSeeds = [
   'Neural consensus model confidence updated.',
   'No codec-level corruption found in current segment.',
   'Escalating suspicious confidence to analyst view.',
+  'Analyzing micro-expression temporal coherence...',
+  'Voice spectral anomaly detected in 2-4kHz range...',
+  'Background noise pattern consistent across frames.',
+  'Face mesh alignment deviation: 0.3° lateral shift.',
+  'Audio-visual sync delta: +12ms (within tolerance).',
+  'Skin texture frequency analysis: nominal.',
 ];
 
 export const participantTiles = [
@@ -125,7 +131,7 @@ export function generateMockResult({
   const label = classifyScore(score);
   const confidence = confidenceFromScore(score);
 
-  const timeline = Array.from({ length: 12 }, (_, index) => {
+  const timeline = Array.from({ length: 14 }, (_, index) => {
     const center = score + Math.sin(index / 2) * randomInt(2, 9);
     return Math.min(98, Math.max(6, Math.round(center + randomInt(-7, 7))));
   });

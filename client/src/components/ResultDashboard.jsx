@@ -3,90 +3,168 @@ import {
   AlertTriangle,
   CheckCircle2,
   Download,
+  Eye,
+  Flame,
   RefreshCw,
   Radar,
   ShieldAlert,
+  TrendingUp,
 } from 'lucide-react';
 
+/* ─────────── Score Gauge ─────────── */
 function ScoreGauge({ score }) {
   const normalized = Math.min(100, Math.max(0, score));
   const radius = 74;
   const circumference = 2 * Math.PI * radius;
   const offset = circumference - (normalized / 100) * circumference;
 
+  const color = score >= 75
+    ? { start: '#f43f5e', end: '#ef4444' }
+    : score >= 45
+      ? { start: '#f59e0b', end: '#eab308' }
+      : { start: '#34d399', end: '#10b981' };
+
   return (
-    <div className="relative mx-auto h-48 w-48">
+    <div className="relative mx-auto h-52 w-52">
       <svg className="h-full w-full -rotate-90" viewBox="0 0 180 180" aria-label="Deepfake Score Gauge">
-        <circle cx="90" cy="90" r={radius} fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="14" />
+        {/* Background track */}
+        <circle cx="90" cy="90" r={radius} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="12" />
+        {/* Animated score arc */}
         <motion.circle
           cx="90"
           cy="90"
           r={radius}
           fill="none"
           stroke="url(#gaugeGradient)"
-          strokeWidth="14"
+          strokeWidth="12"
           strokeLinecap="round"
           strokeDasharray={circumference}
           initial={{ strokeDashoffset: circumference }}
           animate={{ strokeDashoffset: offset }}
-          transition={{ duration: 0.8, ease: 'easeOut' }}
+          transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
+          style={{ filter: `drop-shadow(0 0 8px ${color.start}40)` }}
         />
         <defs>
           <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#38BDF8" />
-            <stop offset="50%" stopColor="#6366F1" />
-            <stop offset="100%" stopColor="#8B5CF6" />
+            <stop offset="0%" stopColor={color.start} />
+            <stop offset="100%" stopColor={color.end} />
           </linearGradient>
         </defs>
       </svg>
       <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-        <p className="text-4xl font-semibold text-white">{normalized}%</p>
-        <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Deepfake Score</p>
+        <motion.p
+          initial={{ opacity: 0, scale: 0.5 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.5, duration: 0.5 }}
+          className="text-5xl font-bold text-white"
+        >
+          {normalized}
+          <span className="text-2xl text-slate-400">%</span>
+        </motion.p>
+        <p className="mt-1 text-[10px] uppercase tracking-[0.2em] text-slate-500">Deepfake Score</p>
       </div>
     </div>
   );
 }
 
+/* ─────────── Label Badge ─────────── */
 function LabelBadge({ label }) {
-  if (label === 'Fake') {
-    return (
-      <span className="inline-flex items-center gap-2 rounded-full border border-rose-400/40 bg-rose-400/10 px-3 py-1 text-sm text-rose-200">
-        <AlertTriangle className="h-4 w-4" />
-        Fake
-      </span>
-    );
-  }
-  if (label === 'Suspicious') {
-    return (
-      <span className="inline-flex items-center gap-2 rounded-full border border-amber-400/40 bg-amber-400/10 px-3 py-1 text-sm text-amber-200">
-        <ShieldAlert className="h-4 w-4" />
-        Suspicious
-      </span>
-    );
-  }
+  const configs = {
+    Fake: { icon: AlertTriangle, className: 'border-rose-400/30 bg-rose-400/8 text-rose-200', glow: 'shadow-[0_0_20px_rgba(244,63,94,0.15)]' },
+    Suspicious: { icon: ShieldAlert, className: 'border-amber-400/30 bg-amber-400/8 text-amber-200', glow: 'shadow-[0_0_20px_rgba(245,158,11,0.15)]' },
+    Real: { icon: CheckCircle2, className: 'border-emerald-400/30 bg-emerald-400/8 text-emerald-200', glow: 'shadow-[0_0_20px_rgba(52,211,153,0.15)]' },
+  };
+
+  const config = configs[label] || configs.Real;
+  const Icon = config.icon;
+
   return (
-    <span className="inline-flex items-center gap-2 rounded-full border border-emerald-400/40 bg-emerald-400/10 px-3 py-1 text-sm text-emerald-200">
-      <CheckCircle2 className="h-4 w-4" />
-      Real
+    <span className={`inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm font-medium ${config.className} ${config.glow}`}>
+      <Icon className="h-4 w-4" />
+      {label}
     </span>
   );
 }
 
+/* ─────────── Insight Card ─────────── */
+function InsightCard({ insight, index }) {
+  const severityConfig = {
+    High: { icon: Flame, className: 'border-rose-400/30 bg-rose-400/8 text-rose-200' },
+    Medium: { icon: AlertTriangle, className: 'border-amber-400/30 bg-amber-400/8 text-amber-200' },
+    Low: { icon: CheckCircle2, className: 'border-emerald-400/30 bg-emerald-400/8 text-emerald-200' },
+  };
+
+  const config = severityConfig[insight.severity] || severityConfig.Low;
+  const Icon = config.icon;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: -10 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ delay: 0.1 * index, duration: 0.4 }}
+      className="group rounded-xl border border-white/8 bg-black/20 p-4 transition-all duration-300 hover:border-white/15 hover:bg-black/30"
+    >
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <Icon className="h-4 w-4 text-slate-500" />
+          <p className="text-sm text-slate-200">{insight.title}</p>
+        </div>
+        <span className={`rounded-full border px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.15em] ${config.className}`}>
+          {insight.severity}
+        </span>
+      </div>
+      <div className="mt-2.5 flex items-center gap-2">
+        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/6">
+          <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: `${insight.confidence}%` }}
+            transition={{ delay: 0.2 + 0.1 * index, duration: 0.6 }}
+            className="h-full rounded-full bg-gradient-to-r from-brand-cyan to-brand-indigo"
+          />
+        </div>
+        <span className="text-[10px] font-mono text-slate-500">{insight.confidence}%</span>
+      </div>
+    </motion.div>
+  );
+}
+
+/* ─────────── Heatmap Overlay ─────────── */
+function HeatmapOverlay() {
+  return (
+    <div className="pointer-events-none absolute inset-0">
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.8 }}
+      >
+        <div className="absolute left-[18%] top-[24%] h-20 w-28 rounded-full bg-rose-500/15 blur-2xl" />
+        <div className="absolute bottom-[18%] right-[22%] h-16 w-24 rounded-full bg-amber-400/15 blur-2xl" />
+        <div className="absolute bottom-[35%] left-[40%] h-14 w-14 rounded-full bg-brand-cyan/15 blur-xl" />
+        <div className="absolute top-[40%] right-[35%] h-10 w-16 rounded-full bg-rose-400/10 blur-xl" />
+      </motion.div>
+    </div>
+  );
+}
+
+/* ─────────── Main Dashboard ─────────── */
 export default function ResultDashboard({ result, previewUrl, onDownload, onReanalyze }) {
   const mode = result?.mode || 'video';
 
   return (
     <div className="space-y-6">
+      {/* Top section: Media + Score */}
       <section className="grid gap-6 xl:grid-cols-12">
+        {/* Left: Media preview */}
         <div className="glass-card overflow-hidden p-4 md:p-5 xl:col-span-7">
           <div className="mb-3 flex items-center justify-between">
-            <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Analyzed Media</p>
-            <span className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs uppercase tracking-[0.16em] text-brand-cyan">
-              {mode} mode
-            </span>
+            <div className="flex items-center gap-2">
+              <Eye className="h-4 w-4 text-brand-cyan/60" />
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Analyzed Media</p>
+            </div>
+            <span className="cyber-badge text-[9px]">{mode} mode</span>
           </div>
 
-          <div className="relative aspect-video overflow-hidden rounded-2xl border border-white/10 bg-slate-950">
+          <div className="relative aspect-video overflow-hidden rounded-2xl border border-white/8 bg-gradient-to-br from-slate-900 to-black">
             {previewUrl && mode === 'image' && (
               <img src={previewUrl} alt="Analyzed media" className="h-full w-full object-cover" />
             )}
@@ -96,14 +174,16 @@ export default function ResultDashboard({ result, previewUrl, onDownload, onRean
             )}
 
             {mode === 'voice' && (
-              <div className="flex h-full flex-col items-center justify-center gap-6 bg-[radial-gradient(circle_at_50%_10%,rgba(56,189,248,0.2),transparent_55%)] px-6">
-                <p className="text-sm uppercase tracking-[0.22em] text-slate-300">Voice Spectrum Snapshot</p>
-                <div className="flex h-24 w-full items-end justify-center gap-1.5">
-                  {Array.from({ length: 34 }, (_, idx) => (
-                    <span
+              <div className="flex h-full flex-col items-center justify-center gap-6 bg-[radial-gradient(circle_at_50%_10%,rgba(56,189,248,0.15),transparent_55%)]">
+                <p className="text-[10px] uppercase tracking-[0.25em] text-slate-500">Voice Spectrum Analysis</p>
+                <div className="flex h-28 w-full max-w-md items-end justify-center gap-1">
+                  {Array.from({ length: 40 }, (_, idx) => (
+                    <motion.span
                       key={idx}
-                      className="w-1 rounded bg-gradient-to-t from-brand-indigo to-brand-cyan"
-                      style={{ height: `${30 + Math.abs(Math.sin(idx / 2)) * 70}%` }}
+                      initial={{ height: '10%' }}
+                      animate={{ height: `${30 + Math.abs(Math.sin(idx / 2.5)) * 70}%` }}
+                      transition={{ delay: idx * 0.02, duration: 0.4 }}
+                      className="w-1 rounded-sm bg-gradient-to-t from-brand-indigo/80 to-brand-cyan/60"
                     />
                   ))}
                 </div>
@@ -111,86 +191,93 @@ export default function ResultDashboard({ result, previewUrl, onDownload, onRean
             )}
 
             {!previewUrl && mode !== 'voice' && (
-              <div className="flex h-full items-center justify-center text-sm text-slate-500">No media preview available</div>
+              <div className="flex h-full items-center justify-center text-sm text-slate-600">No media preview available</div>
             )}
 
-            <div className="pointer-events-none absolute inset-0">
-              <div className="absolute left-[18%] top-[24%] h-16 w-24 rounded-full bg-rose-500/20 blur-2xl" />
-              <div className="absolute bottom-[18%] right-[22%] h-16 w-20 rounded-full bg-amber-400/20 blur-2xl" />
-              <div className="absolute bottom-[28%] left-[40%] h-12 w-12 rounded-full bg-brand-cyan/20 blur-xl" />
+            {/* Heatmap overlay */}
+            <HeatmapOverlay />
+
+            {/* Heatmap label */}
+            <div className="absolute right-3 top-3 rounded-lg border border-white/10 bg-black/50 backdrop-blur-sm px-2.5 py-1 text-[9px] uppercase tracking-wider text-slate-400">
+              Heatmap Overlay
             </div>
           </div>
         </div>
 
+        {/* Right: Score + Actions */}
         <div className="glass-card p-6 xl:col-span-5">
           <ScoreGauge score={result.score} />
-          <div className="mt-5 flex flex-col items-center gap-2 text-center">
+          <div className="mt-6 flex flex-col items-center gap-3 text-center">
             <LabelBadge label={result.label} />
-            <p className="max-w-sm text-sm leading-relaxed text-slate-300">{result.summary}</p>
-            <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Confidence {result.confidence}%</p>
+            <p className="max-w-sm text-sm leading-relaxed text-slate-400">{result.summary}</p>
+            <p className="text-[10px] uppercase tracking-[0.2em] text-slate-600">
+              Model Confidence: {result.confidence}%
+            </p>
           </div>
 
-          <div className="mt-6 grid grid-cols-2 gap-3">
-            <button onClick={onDownload} className="cyber-button inline-flex items-center justify-center gap-2 py-2 text-sm">
+          <div className="mt-8 grid grid-cols-2 gap-3">
+            <button
+              id="download-report-btn"
+              onClick={onDownload}
+              className="cyber-button inline-flex items-center justify-center gap-2 py-3 text-sm"
+            >
               <Download className="h-4 w-4" />
-              Download Report
+              <span>Download Report</span>
             </button>
             <button
+              id="reanalyze-btn"
               onClick={onReanalyze}
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/5 py-2 text-sm text-slate-200 transition hover:border-brand-cyan/70 hover:text-white"
+              className="ghost-button inline-flex items-center justify-center gap-2 py-3 text-sm"
             >
               <RefreshCw className="h-4 w-4" />
-              Re-analyze
+              <span>Re-analyze</span>
             </button>
           </div>
         </div>
       </section>
 
+      {/* Bottom section: Insights + Timeline */}
       <section className="grid gap-6 xl:grid-cols-12">
+        {/* Insights */}
         <div className="glass-card p-5 xl:col-span-7">
-          <h3 className="text-lg font-semibold text-white">Detection Insights</h3>
-          <div className="mt-4 space-y-3">
-            {result.insights.map((insight) => (
-              <div key={insight.id} className="rounded-xl border border-white/10 bg-black/25 p-4">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-sm text-slate-200">{insight.title}</p>
-                  <span
-                    className={[
-                      'rounded-full border px-2 py-1 text-xs uppercase tracking-[0.15em]',
-                      insight.severity === 'High'
-                        ? 'border-rose-400/40 bg-rose-400/10 text-rose-200'
-                        : insight.severity === 'Medium'
-                          ? 'border-amber-400/40 bg-amber-400/10 text-amber-200'
-                          : 'border-emerald-400/40 bg-emerald-400/10 text-emerald-200',
-                    ].join(' ')}
-                  >
-                    {insight.severity}
-                  </span>
-                </div>
-                <p className="mt-1 text-xs text-slate-400">Signal confidence: {insight.confidence}%</p>
-              </div>
+          <div className="mb-4 flex items-center gap-2">
+            <ShieldAlert className="h-4 w-4 text-brand-cyan/60" />
+            <h3 className="text-lg font-semibold text-white">Detection Insights</h3>
+          </div>
+          <div className="space-y-2.5">
+            {result.insights.map((insight, index) => (
+              <InsightCard key={insight.id} insight={insight} index={index} />
             ))}
           </div>
         </div>
 
+        {/* Timeline drift */}
         <div className="glass-card p-5 xl:col-span-5">
           <div className="mb-4 flex items-center gap-2">
-            <Radar className="h-4 w-4 text-brand-cyan" />
-            <h3 className="text-lg font-semibold text-white">Timeline Drift Graph</h3>
+            <TrendingUp className="h-4 w-4 text-brand-cyan/60" />
+            <h3 className="text-lg font-semibold text-white">Timeline Drift</h3>
           </div>
-          <div className="flex h-48 items-end gap-2 rounded-xl border border-white/10 bg-black/25 p-4">
+          <div className="flex h-48 items-end gap-1.5 rounded-xl border border-white/6 bg-black/15 p-4">
             {result.timeline.map((point, idx) => (
               <motion.div
                 key={`${idx}-${point}`}
                 initial={{ height: 0 }}
                 animate={{ height: `${point}%` }}
-                transition={{ delay: idx * 0.03, duration: 0.35 }}
-                className="flex-1 rounded-t bg-gradient-to-t from-brand-indigo via-brand-cyan to-brand-violet"
-              />
+                transition={{ delay: idx * 0.04, duration: 0.4, ease: 'easeOut' }}
+                className="group relative flex-1 cursor-pointer rounded-t"
+                style={{
+                  background: `linear-gradient(to top, rgba(99,102,241,0.7), rgba(56,189,248,0.5))`,
+                }}
+              >
+                {/* Tooltip */}
+                <div className="absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-black/80 px-2 py-0.5 text-[9px] text-slate-300 opacity-0 transition-opacity group-hover:opacity-100">
+                  {point}%
+                </div>
+              </motion.div>
             ))}
           </div>
-          <p className="mt-3 text-xs text-slate-400">
-            Graph simulates frame-by-frame anomaly confidence progression over the analyzed sample.
+          <p className="mt-3 text-[11px] text-slate-600">
+            Frame-by-frame anomaly confidence progression across the analyzed sample.
           </p>
         </div>
       </section>
