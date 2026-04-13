@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { FileBadge2, Clock } from 'lucide-react';
+import { FileBadge2, Clock, Mail } from 'lucide-react'; // Added Mail icon
 import PageTransition from '../components/PageTransition';
 import ResultDashboard from '../components/ResultDashboard';
 import { generateMockResult } from '../data/mockData';
@@ -9,6 +9,7 @@ export default function ResultsPage() {
   const location = useLocation();
   const navigate = useNavigate();
 
+  // Fallback if someone navigates here directly without state
   const fallbackResult = useMemo(
     () => generateMockResult({ mode: 'video', source: 'upload', filename: 'demo-sample.mp4' }),
     [],
@@ -16,6 +17,7 @@ export default function ResultsPage() {
 
   const result = location.state?.result || fallbackResult;
   const previewUrl = location.state?.previewUrl || '';
+  const isEmail = result.mode === 'email';
 
   const handleDownload = () => {
     const reportPayload = {
@@ -25,7 +27,6 @@ export default function ResultsPage() {
       mode: result.mode,
       score: result.score,
       label: result.label,
-      confidence: result.confidence,
       summary: result.summary,
       insights: result.insights,
       providers: result.providers || [],
@@ -35,7 +36,7 @@ export default function ResultsPage() {
     const downloadUrl = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = downloadUrl;
-    link.download = `${result.filename || 'deepfake-report'}.json`;
+    link.download = `${result.filename || 'aegis-forensic-report'}.json`;
     link.click();
     URL.revokeObjectURL(downloadUrl);
   };
@@ -46,19 +47,24 @@ export default function ResultsPage() {
         <div>
           <div className="mb-3 flex items-center gap-3">
             <span className="cyber-badge cyber-badge-glow">
-              <FileBadge2 className="h-3 w-3" />
-              Results Dashboard
+              {isEmail ? <Mail className="h-3 w-3" /> : <FileBadge2 className="h-3 w-3" />}
+              {isEmail ? 'Email Forensic Dashboard' : 'Results Dashboard'}
             </span>
             <span className="inline-flex items-center gap-1.5 rounded-full border border-white/8 bg-white/[0.03] px-2.5 py-1 text-[10px] text-slate-500">
               <Clock className="h-3 w-3" />
-              {new Date(result.generatedAt).toLocaleString()}
+              {new Date(result.generatedAt || Date.now()).toLocaleString()}
             </span>
           </div>
+          
           <h1 className="font-display text-4xl font-bold text-white md:text-5xl">
-            Deepfake Detection <span className="glow-text">Report</span>
+            {isEmail ? 'Phishing Analysis' : 'Deepfake Detection'}{' '}
+            <span className="glow-text">Report</span>
           </h1>
+          
           <p className="mt-3 text-sm text-slate-400 md:text-base">
-            Review risk score, forensic insights, and timeline drift from the multimodal analysis.
+            {isEmail 
+              ? 'Review AI-generated forensic insights, header verification, and malicious intent scoring.'
+              : 'Review risk score, forensic insights, and timeline drift from the multimodal analysis.'}
           </p>
         </div>
       </section>
@@ -70,7 +76,7 @@ export default function ResultsPage() {
         onReanalyze={() => navigate('/detect')}
       />
 
-      {/* Provider cards */}
+      {/* Provider cards - Only show if providers exist (usually for media) */}
       {result.providers?.length > 0 && (
         <section className="glass-card p-5">
           <h2 className="text-lg font-semibold text-white mb-4">API Provider Analysis</h2>
@@ -96,6 +102,15 @@ export default function ResultsPage() {
             ))}
           </div>
         </section>
+      )}
+
+      {/* Email Specific Footer (Optional Hackathon Tip) */}
+      {isEmail && (
+        <div className="rounded-xl border border-brand-cyan/20 bg-brand-cyan/5 p-4 text-center">
+          <p className="text-sm text-brand-cyan">
+            Forensic Tip: Always verify the "Return-Path" header against the "From" address to confirm sender identity.
+          </p>
+        </div>
       )}
     </PageTransition>
   );
