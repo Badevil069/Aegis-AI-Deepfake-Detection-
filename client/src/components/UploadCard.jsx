@@ -11,7 +11,7 @@ import {
   X,
 } from 'lucide-react';
 
-const modeOptions = [
+const defaultModeOptions = [
   { id: 'video', label: 'Video Detection', icon: Film, accept: '.mp4,.mov,.webm', desc: 'MP4, MOV, WebM' },
   { id: 'image', label: 'Image Detection', icon: FileImage, accept: '.jpg,.jpeg,.png', desc: 'JPG, PNG' },
   { id: 'voice', label: 'Voice Detection', icon: AudioLines, accept: '.wav,.mp3,.ogg', desc: 'WAV, MP3, OGG' },
@@ -25,16 +25,26 @@ function detectMediaKind(file) {
   return 'unknown';
 }
 
-export default function UploadCard({ onAnalyze }) {
-  const [mode, setMode] = useState('video');
+export default function UploadCard({
+  onAnalyze,
+  modeOptions = defaultModeOptions,
+  defaultMode,
+  title = 'Upload Detection',
+  subtitle = "Drag a file or choose manually. We'll run a multimodal deepfake scan.",
+  analyzeLabel = 'Analyze Now',
+}) {
+  const initialMode = defaultMode || modeOptions[0]?.id || 'video';
+  const [mode, setMode] = useState(initialMode);
   const [dragActive, setDragActive] = useState(false);
   const [file, setFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState('');
   const inputRef = useRef(null);
+  const fallbackMode = defaultMode || modeOptions[0]?.id || 'video';
+  const activeMode = modeOptions.some((option) => option.id === mode) ? mode : fallbackMode;
 
   const selectedMode = useMemo(
-    () => modeOptions.find((option) => option.id === mode) || modeOptions[0],
-    [mode],
+    () => modeOptions.find((option) => option.id === activeMode) || modeOptions[0],
+    [activeMode, modeOptions],
   );
 
   useEffect(() => {
@@ -73,17 +83,17 @@ export default function UploadCard({ onAnalyze }) {
         <div className="mx-auto mb-4 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-cyan/20 to-brand-indigo/10">
           <UploadCloud className="h-7 w-7 text-brand-cyan" />
         </div>
-        <h2 className="font-display text-2xl font-bold text-white">Upload Detection</h2>
+        <h2 className="font-display text-2xl font-bold text-white">{title}</h2>
         <p className="mt-2 text-sm text-slate-500">
-          Drag a file or choose manually. We'll run a multimodal deepfake scan.
+          {subtitle}
         </p>
       </div>
 
       {/* Mode selector */}
-      <div className="grid gap-3 md:grid-cols-3 mb-6">
+      <div className={`grid gap-3 mb-6 ${modeOptions.length > 1 ? 'md:grid-cols-3' : 'md:grid-cols-1'}`}>
         {modeOptions.map((option) => {
           const Icon = option.icon;
-          const active = option.id === mode;
+          const active = option.id === activeMode;
           return (
             <button
               key={option.id}
@@ -156,12 +166,22 @@ export default function UploadCard({ onAnalyze }) {
             ref={inputRef}
             type="file"
             className="hidden"
-            accept={selectedMode.accept}
+            accept={selectedMode?.accept}
             onChange={(event) => setSelectedFile(event.target.files?.[0])}
           />
           <p className="mt-4 text-[11px] text-slate-600">
-            Supported: {selectedMode.desc} • Max 500MB
+            Supported: {selectedMode?.desc || 'Configured file types'} • Max 500MB
           </p>
+
+          {selectedMode?.id === 'document' && (
+            <div className="mx-auto mt-3 max-w-xl rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-left">
+              <p className="text-[10px] uppercase tracking-[0.12em] text-slate-500">Document Coverage</p>
+              <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
+                PDF, DOC, DOCX, XLS, XLSX, CSV, ZIP, PNG and TIFF are supported for document verification.
+                Image-style evidence like JPG/JPEG is handled in the Image Detection panel.
+              </p>
+            </div>
+          )}
         </div>
       </motion.div>
 
@@ -203,10 +223,17 @@ export default function UploadCard({ onAnalyze }) {
                 </div>
               )}
               {mediaKind === 'unknown' && (
-                <p className="inline-flex items-center gap-2 text-sm text-amber-300">
-                  <AlertTriangle className="h-4 w-4" />
-                  This file type may not preview correctly.
-                </p>
+                selectedMode?.id === 'document' ? (
+                  <div className="rounded-xl border border-white/8 bg-black/20 p-4 text-left">
+                    <p className="text-sm text-slate-300">Preview is limited for document binaries in browser.</p>
+                    <p className="mt-1 text-xs text-slate-500">The file will still be sent for full document verification on the backend.</p>
+                  </div>
+                ) : (
+                  <p className="inline-flex items-center gap-2 text-sm text-amber-300">
+                    <AlertTriangle className="h-4 w-4" />
+                    This file type may not preview correctly.
+                  </p>
+                )
               )}
             </div>
           </motion.div>
@@ -221,7 +248,7 @@ export default function UploadCard({ onAnalyze }) {
         onClick={() => onAnalyze?.({ mode, file, previewUrl, mediaKind })}
       >
         <Sparkles className="h-4 w-4" />
-        <span>Analyze Now</span>
+        <span>{analyzeLabel}</span>
       </button>
     </div>
   );

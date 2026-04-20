@@ -90,7 +90,43 @@ except Exception as e:
     logger.warning(f"Document auditor not available: {e}")
     auditor = None
 
-logger.info(f"Detection engine: {'Vertex AI (Gemini 1.5 Pro)' if ai_available else 'CV Fallback (OpenCV)'}")
+if ai_available and ai_detector:
+    logger.info(f"Detection engine: Vertex AI ({getattr(ai_detector, 'model_name', 'configured-model')})")
+else:
+    logger.info("Detection engine: CV Fallback (OpenCV)")
+
+VERTEX_DOCUMENT_REVIEW_POLICY = os.getenv("VERTEX_DOCUMENT_REVIEW_POLICY", "suspicious_only").lower()
+if VERTEX_DOCUMENT_REVIEW_POLICY not in {"off", "always", "suspicious_only", "fallback"}:
+    VERTEX_DOCUMENT_REVIEW_POLICY = "suspicious_only"
+
+
+def should_run_vertex_document_review(doc_result: dict) -> bool:
+    """Cost-aware policy for optional Vertex second-pass document review."""
+    if not ai_available or not ai_detector:
+        return False
+
+    if VERTEX_DOCUMENT_REVIEW_POLICY == "off":
+        return False
+    if VERTEX_DOCUMENT_REVIEW_POLICY == "always":
+        return True
+
+    details = [d.lower() for d in doc_result.get("details", []) if isinstance(d, str)]
+    metadata = doc_result.get("metadata", {}) if isinstance(doc_result.get("metadata", {}), dict) else {}
+    auditor_unavailable = any(
+        "auditor not available" in d
+        or "cloud vision api unavailable" in d
+        or "unable to run cloud vision" in d
+        for d in details
+    )
+    suspicious = bool(doc_result.get("is_tampered") or doc_result.get("metadata_integrity") is False)
+    local_fallback_used = bool(metadata.get("local_fallback_used", True))
+    cloud_vision_failed = metadata.get("cloud_vision_status") in {"fallback", "error", "unavailable"}
+
+    if VERTEX_DOCUMENT_REVIEW_POLICY == "fallback":
+        return auditor_unavailable or local_fallback_used
+
+    # Default: suspicious_only
+    return suspicious or local_fallback_used or cloud_vision_failed
 
 # ═══════════════════════════════════════════
 #  ACTIVE STREAM SESSIONS
@@ -501,10 +537,21 @@ async def analyze_evidence(file: UploadFile = File(...)):
         if auditor:
             doc_result = auditor.audit_document(contents, filename)
 
-        img_result = {"is_deepfake": False, "confidence": 0.0, "details": ["Not a supported format."]}
-        if is_image and ai_available and ai_detector:
-            img_result = ai_detector.analyze_static_image(contents)
-        elif is_image:
+        img_result = {
+            "is_deepfake": False,
+            "confidence": 0.0,
+            "details": ["Vertex document reviewer skipped by policy."],
+            "review_mode": "skipped",
+        }
+
+        if should_run_vertex_document_review(doc_result):
+            img_result = ai_detector.review_document(
+                contents,
+                filename,
+                audit_findings=doc_result.get("details", []),
+                document_text=doc_result.get("extracted_text", ""),
+            )
+        elif is_image and not ai_available:
             # Use CV fallback for image analysis
             frame = cv_detector.decode_raw_bytes(contents)
             if frame is not None:
@@ -513,6 +560,7 @@ async def analyze_evidence(file: UploadFile = File(...)):
                     "is_deepfake": cv_result["status"] == "FAKE",
                     "confidence": cv_result["risk_score"] / 100.0,
                     "details": cv_result["details"],
+                    "review_mode": "cv_fallback",
                 }
 
         final_risk = "SAFE"
@@ -523,6 +571,7 @@ async def analyze_evidence(file: UploadFile = File(...)):
             "status": "success",
             "filename": filename,
             "risk_assessment": final_risk,
+            "vertex_document_review_policy": VERTEX_DOCUMENT_REVIEW_POLICY,
             "cloud_vision_audit": doc_result,
             "gemini_visual_scan": img_result,
         }
