@@ -98,6 +98,11 @@ const insightTemplates = {
     'Voiceprint confidence fluctuates between channels.',
     'Latency artifacts indicate possible relay manipulation.',
   ],
+  document: [
+    'EXIF/PDF metadata chain shows potential inconsistency.',
+    'OCR text structure deviates from expected invoice format.',
+    'Compression pattern suggests post-export modification.',
+  ],
 };
 
 function randomInt(min, max) {
@@ -124,6 +129,7 @@ export function generateMockResult({
     image: [34, 90],
     voice: [40, 95],
     live: [48, 97],
+    document: [36, 94],
   };
 
   const [min, max] = ranges[mode] || ranges.video;

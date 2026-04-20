@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Upload, ShieldCheck, Mail } from 'lucide-react'; // Added Mail icon
 import PageTransition from '../components/PageTransition';
 import UploadCard from '../components/UploadCard';
+import { documentModeOptions } from '../data/uploadModes';
 import EmailPasteCard from '../components/EmailPasteCard'; // Import your new component
 
 export default function DetectPage() {
@@ -15,6 +16,7 @@ export default function DetectPage() {
       state: {
         source: 'upload',
         mode,
+        file,
         filename: file?.name || 'uploaded-media',
         previewUrl,
         mediaKind,
@@ -90,9 +92,24 @@ export default function DetectPage() {
         </div>
       </section>
 
-      {/* CONDITIONAL RENDERING */}
       {activeTab === 'media' ? (
-        <UploadCard onAnalyze={handleAnalyze} />
+        <section className="grid gap-6 lg:grid-cols-2 lg:items-start">
+          <UploadCard
+            onAnalyze={handleAnalyze}
+            title="Media Deepfake Detection"
+            subtitle="Upload video, image, or audio and run multimodal deepfake analysis."
+            analyzeLabel="Analyze Media"
+          />
+
+          <UploadCard
+            onAnalyze={handleAnalyze}
+            modeOptions={documentModeOptions}
+            defaultMode="document"
+            title="Fake Document Verification"
+            subtitle="Upload PDFs and office documents to detect metadata tampering and fraud risks."
+            analyzeLabel="Verify Document"
+          />
+        </section>
       ) : (
         <EmailPasteCard onAnalyze={handleEmailAnalyze} />
       )}

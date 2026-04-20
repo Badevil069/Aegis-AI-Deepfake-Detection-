@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { FileBadge2, Clock, Mail } from 'lucide-react'; // Added Mail icon
+import { FileBadge2, Clock, Mail } from 'lucide-react';
+import { jsPDF } from 'jspdf';
 import PageTransition from '../components/PageTransition';
 import ResultDashboard from '../components/ResultDashboard';
 import { generateMockResult } from '../data/mockData';
@@ -20,25 +21,80 @@ export default function ResultsPage() {
   const isEmail = result.mode === 'email';
 
   const handleDownload = () => {
-    const reportPayload = {
-      reportId: result.id,
-      generatedAt: new Date().toISOString(),
-      filename: result.filename,
-      mode: result.mode,
-      score: result.score,
-      label: result.label,
-      summary: result.summary,
-      insights: result.insights,
-      providers: result.providers || [],
+    if (isEmail) {
+      const reportPayload = {
+        reportId: result.id,
+        generatedAt: new Date().toISOString(),
+        filename: result.filename,
+        mode: result.mode,
+        score: result.score,
+        label: result.label,
+        summary: result.summary,
+        insights: result.insights,
+        providers: result.providers || [],
+      };
+
+      const blob = new Blob([JSON.stringify(reportPayload, null, 2)], { type: 'application/json' });
+      const downloadUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = `${result.filename || 'aegis-forensic-report'}.json`;
+      link.click();
+      URL.revokeObjectURL(downloadUrl);
+      return;
+    }
+
+    const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+    const margin = 48;
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const maxWidth = doc.internal.pageSize.getWidth() - margin * 2;
+    let y = 64;
+
+    const writeLine = (text, size = 11, weight = 'normal', color = [30, 41, 59]) => {
+      doc.setFont('helvetica', weight);
+      doc.setFontSize(size);
+      doc.setTextColor(color[0], color[1], color[2]);
+      const lines = doc.splitTextToSize(String(text), maxWidth);
+      lines.forEach((line) => {
+        if (y > pageHeight - 56) {
+          doc.addPage();
+          y = 64;
+        }
+        doc.text(line, margin, y);
+        y += size + 4;
+      });
     };
 
-    const blob = new Blob([JSON.stringify(reportPayload, null, 2)], { type: 'application/json' });
-    const downloadUrl = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = downloadUrl;
-    link.download = `${result.filename || 'aegis-forensic-report'}.json`;
-    link.click();
-    URL.revokeObjectURL(downloadUrl);
+    writeLine('Aegis Sentinel - Deepfake Detection Report', 18, 'bold', [15, 23, 42]);
+    y += 4;
+    writeLine(`Generated: ${new Date().toLocaleString()}`);
+    writeLine(`Report ID: ${result.id || 'N/A'}`);
+    writeLine(`Filename: ${result.filename || 'N/A'}`);
+    writeLine(`Mode: ${result.mode || 'N/A'}`);
+    writeLine(`Score: ${result.score}%`);
+    writeLine(`Label: ${result.label}`);
+    writeLine(`Confidence: ${result.confidence}%`);
+    y += 8;
+    writeLine('Summary', 13, 'bold');
+    writeLine(result.summary || 'No summary available.');
+    y += 8;
+
+    writeLine('Insights', 13, 'bold');
+    (result.insights || []).forEach((insight, idx) => {
+      writeLine(`${idx + 1}. ${insight.title} [${insight.severity}] (${insight.confidence}%)`);
+    });
+
+    if ((result.providers || []).length > 0) {
+      y += 8;
+      writeLine('Provider Analysis', 13, 'bold');
+      result.providers.forEach((provider) => {
+        writeLine(`${provider.provider} - ${provider.mode} - Score ${provider.score}%`, 11, 'bold');
+        (provider.findings || []).forEach((finding) => writeLine(`- ${finding}`));
+      });
+    }
+
+    const safeBase = (result.filename || 'deepfake-report').replace(/\.[^/.]+$/, '');
+    doc.save(`${safeBase}-report.pdf`);
   };
 
   return (
