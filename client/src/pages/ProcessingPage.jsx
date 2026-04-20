@@ -4,8 +4,9 @@ import Loader from '../components/Loader';
 import { generateMockResult } from '../data/mockData';
 import * as cloudVisionService from '../services/cloudVision';
 import * as vertexAIService from '../services/vertexAI';
+import { analyzeEmail } from '../services/emailService';
 
-const phases = [
+const mediaPhases = [
   'Extracting frames...',
   'Analyzing audio...',
   'Detecting inconsistencies...',
@@ -19,6 +20,14 @@ const documentPhases = [
   'Cross-checking structural integrity...',
   'Scoring forgery probability...',
   'Compiling document audit report...',
+];
+
+const emailPhases = [
+  'Parsing email headers...',
+  'Verifying SPF/DKIM records...',
+  'Analyzing body text intent...',
+  'Checking for malicious links...',
+  'Generating forensic risk report...',
 ];
 
 const DOCUMENT_ANALYSIS_TIMEOUT_MS = 20000;
@@ -72,6 +81,53 @@ async function runPlaceholderAnalysis(mode, payload) {
   };
 }
 
+function scoreFromRiskLevel(riskLevel = '') {
+  const normalized = String(riskLevel).toLowerCase();
+  if (normalized === 'critical') return 95;
+  if (normalized === 'high') return 85;
+  if (normalized === 'medium') return 60;
+  return 25;
+}
+
+function parseEmailAnalysis(analysis) {
+  if (analysis && typeof analysis === 'object') {
+    return {
+      riskLevel: analysis.risk_level || 'Medium',
+      isFake: Boolean(analysis.is_fake),
+      summary: analysis.summary || 'Email analysis completed.',
+      threats: Array.isArray(analysis.threats) ? analysis.threats : [],
+    };
+  }
+
+  const text = String(analysis || 'Email analysis completed.');
+  const lower = text.toLowerCase();
+  let riskLevel = 'Low';
+  if (lower.includes('critical')) riskLevel = 'Critical';
+  else if (lower.includes('high')) riskLevel = 'High';
+  else if (lower.includes('medium')) riskLevel = 'Medium';
+  const isFake = lower.includes('is_fake') || lower.includes('phishing') || lower.includes('spoof');
+
+  return {
+    riskLevel,
+    isFake,
+    summary: text,
+    threats: [],
+  };
+}
+
+function timelineFromScore(score) {
+  return Array.from({ length: 14 }, (_, i) => {
+    const wave = Math.sin((i + 1) / 2.4) * 8;
+    return Math.max(6, Math.min(98, Math.round(score + wave + (i % 3) * 2 - 2)));
+  });
+}
+
+function severityFromScore(score) {
+  if (score >= 75) return 'High';
+  if (score >= 45) return 'Medium';
+  return 'Low';
+}
+
 async function runDocumentAnalysis(file, timeoutMs = DOCUMENT_ANALYSIS_TIMEOUT_MS) {
   const formData = new FormData();
   formData.append('file', file);
@@ -120,11 +176,20 @@ export default function ProcessingPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const state = useMemo(() => location.state || {}, [location.state]);
+
+  const isEmail = state.source === 'email';
+  const activePhases = isEmail ? emailPhases : state.mode === 'document' ? documentPhases : mediaPhases;
+
   const [progress, setProgress] = useState(6);
-  const activePhases = state.mode === 'document' ? documentPhases : phases;
   const [statusText, setStatusText] = useState(activePhases[0]);
   const [result, setResult] = useState(null);
   const didNavigate = useRef(false);
+
+  useEffect(() => {
+    if (!state.source) {
+      navigate('/detect', { replace: true });
+    }
+  }, [navigate, state.source]);
 
   useEffect(() => {
     let alive = true;
@@ -134,6 +199,65 @@ export default function ProcessingPage() {
       const payload = {
         filename: state.filename || (mode === 'voice' ? 'voice-sample.wav' : mode === 'document' ? 'document-sample.pdf' : 'media-sample.mp4'),
       };
+
+      if (isEmail) {
+        const emailResponse = await analyzeEmail(state.content || '');
+        if (!alive) return;
+
+        if (!emailResponse?.success) {
+          const fallbackEmail = generateMockResult({
+            mode: 'image',
+            source: 'email',
+            filename: 'email-source.txt',
+          });
+          setResult({
+            ...fallbackEmail,
+            mode: 'email',
+            filename: 'email-source.txt',
+            summary: `Email service unavailable: ${emailResponse?.error || 'unknown error'}. Showing local fallback result.`,
+          });
+          return;
+        }
+
+        const parsed = parseEmailAnalysis(emailResponse.analysis);
+        const score = scoreFromRiskLevel(parsed.riskLevel);
+        const label = parsed.isFake ? 'Fake' : classifyScore(score);
+        const threats = parsed.threats.length > 0 ? parsed.threats : ['Header and body checks completed without explicit threat list.'];
+        const severity = severityFromScore(score);
+
+        setResult({
+          id: `EML-${Math.random().toString(36).slice(2, 11)}`,
+          generatedAt: new Date().toISOString(),
+          filename: 'email-source.txt',
+          mode: 'email',
+          score,
+          confidence: Math.max(62, Math.min(97, score + 8)),
+          label,
+          summary: parsed.summary || summaryByLabel(label),
+          insights: [
+            {
+              id: 'email-insight-1',
+              title: `Sender: ${emailResponse.metadata?.sender || 'Unknown sender'}`,
+              severity,
+              confidence: 96,
+            },
+            {
+              id: 'email-insight-2',
+              title: `Embedded links detected: ${emailResponse.metadata?.links_count ?? 0}`,
+              severity: parsed.riskLevel === 'Low' ? 'Low' : 'Medium',
+              confidence: 92,
+            },
+            ...threats.slice(0, 3).map((threat, index) => ({
+              id: `email-threat-${index + 1}`,
+              title: threat,
+              severity,
+              confidence: Math.max(70, 90 - index * 7),
+            })),
+          ],
+          timeline: timelineFromScore(score),
+        });
+        return;
+      }
 
       if (mode === 'document' && state.file) {
         try {
@@ -243,31 +367,40 @@ export default function ProcessingPage() {
         return;
       }
 
-      const placeholder = await runPlaceholderAnalysis(mode, payload);
-      if (!alive) return;
+      try {
+        const placeholder = await runPlaceholderAnalysis(mode, payload);
+        if (!alive) return;
 
-      const base = generateMockResult({
-        mode: placeholder.normalizedMode,
-        source: state.source || (mode === 'live' ? 'live' : 'upload'),
-        filename: payload.filename,
-      });
+        const base = generateMockResult({
+          mode: placeholder.normalizedMode,
+          source: state.source || (mode === 'live' ? 'live' : 'upload'),
+          filename: payload.filename,
+        });
 
-      const averaged = Math.round((base.score + placeholder.cloud.score + placeholder.vertex.score) / 3);
-      const label = classifyScore(averaged);
+        const averaged = Math.round((base.score + placeholder.cloud.score + placeholder.vertex.score) / 3);
+        const label = classifyScore(averaged);
 
-      const merged = {
-        ...base,
-        score: averaged,
-        label,
-        summary: summaryByLabel(label),
-        insights: base.insights.map((insight, idx) => ({
-          ...insight,
-          confidence: Math.min(99, Math.max(56, Math.round((insight.confidence + placeholder.vertex.score - idx * 2) / 1.2))),
-        })),
-        providers: [placeholder.cloud, placeholder.vertex],
-      };
-
-      setResult(merged);
+        setResult({
+          ...base,
+          score: averaged,
+          label,
+          summary: summaryByLabel(label),
+          insights: base.insights.map((insight, idx) => ({
+            ...insight,
+            confidence: Math.min(99, Math.max(56, Math.round((insight.confidence + placeholder.vertex.score - idx * 2) / 1.2))),
+          })),
+          providers: [placeholder.cloud, placeholder.vertex],
+        });
+      } catch (_error) {
+        if (!alive) return;
+        setResult(
+          generateMockResult({
+            mode,
+            source: state.source || 'upload',
+            filename: payload.filename,
+          }),
+        );
+      }
     };
 
     execute();
@@ -275,7 +408,7 @@ export default function ProcessingPage() {
     return () => {
       alive = false;
     };
-  }, [state.file, state.filename, state.mode, state.source]);
+  }, [isEmail, state]);
 
   useEffect(() => {
     setStatusText(activePhases[0]);
@@ -285,7 +418,7 @@ export default function ProcessingPage() {
     const timer = setInterval(() => {
       setProgress((prev) => {
         if (prev >= 100) return 100;
-        const next = Math.min(100, prev + Math.floor(Math.random() * 12) + 6);
+        const next = Math.min(100, prev + Math.floor(Math.random() * 10) + 5);
         const phaseIndex = Math.min(activePhases.length - 1, Math.floor((next / 100) * activePhases.length));
         setStatusText(activePhases[phaseIndex]);
         return next;
