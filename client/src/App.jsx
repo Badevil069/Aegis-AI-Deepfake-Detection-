@@ -1,7 +1,9 @@
+import { useEffect } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { Route, Routes, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
+import CustomCursor from './components/CustomCursor';
 import HomePage from './pages/HomePage';
 import HowItWorksPage from './pages/HowItWorksPage';
 import DetectPage from './pages/DetectPage';
@@ -18,8 +20,16 @@ export default function App() {
   const location = useLocation();
   const hideChrome = chromeHiddenRoutes.includes(location.pathname);
 
+  // Scroll to top on every route change
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
+
   return (
-    <div className="relative min-h-screen overflow-x-hidden bg-app-bg text-slate-100">
+    <div className="relative min-h-screen overflow-x-hidden bg-[#02040a] text-slate-100">
+      {/* Custom Cursor — global across all pages */}
+      <CustomCursor />
+
       {/* Animated star field */}
       <div className="app-stars" />
 

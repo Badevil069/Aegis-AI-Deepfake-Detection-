@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:8000/api'; // Note: Your FastAPI uses port 8000
+const API_URL = '/api'; // Proxied through Vite dev server to backend on port 8001
 
 export const analyzeEmail = async (content) => {
     try {

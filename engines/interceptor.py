@@ -1,5 +1,9 @@
 import cv2
-import streamlink
+try:
+    import streamlink
+    STREAMLINK_AVAILABLE = True
+except ImportError:
+    STREAMLINK_AVAILABLE = False
 import time
 import numpy as np
 
@@ -10,22 +14,54 @@ class LiveStreamInterceptor:
         self.cap = None
 
     def start_stream(self, url):
-        """Connect to a stream URL using Streamlink."""
+        """Connect to a stream URL."""
+        import subprocess
         self.is_running = True
         try:
-            # Resolve the underlying video stream URL
-            streams = streamlink.streams(url)
-            if not streams:
-                # If it's a direct mp4 or m3u8, try opening it directly as a fallback
-                self.cap = cv2.VideoCapture(url)
+            if "youtube.com" in url or "youtu.be" in url:
+                print("Starting extraction...")
+                try:
+                    result = subprocess.run(
+                        ["yt-dlp", "-f", "best", "-g", url],
+                        capture_output=True,
+                        text=True,
+                        timeout=15
+                    )
+                    if result.returncode != 0:
+                        print("yt-dlp error:", result.stderr)
+                        return False
+                    stream_url = result.stdout.strip()
+                except subprocess.TimeoutExpired:
+                    print("yt-dlp timeout")
+                    return False
+            elif url.endswith(".m3u8"):
+                stream_url = url
             else:
-                stream_dict = streams.get("720p", streams.get("best"))
-                if not stream_dict:
-                     stream_dict = list(streams.values())[-1]
-                self.cap = cv2.VideoCapture(stream_dict.url)
+                # Fallback to streamlink if available
+                if STREAMLINK_AVAILABLE:
+                    streams = streamlink.streams(url)
+                    if not streams:
+                        stream_url = url
+                    else:
+                        stream_dict = streams.get("720p", streams.get("best"))
+                        if not stream_dict:
+                             stream_dict = list(streams.values())[-1]
+                        stream_url = stream_dict.url
+                else:
+                    stream_url = url
+            
+            if not stream_url:
+                print("Extraction failed: Stream URL is None")
+                return False
+                
+            print("Stream URL:", stream_url)
+            print("Opening video stream...")
+            self.cap = cv2.VideoCapture(stream_url)
             
             if not self.cap.isOpened():
+                print("Failed to open stream")
                 return False
+                
             return True
         except Exception as e:
             print(f"Error starting stream: {e}")

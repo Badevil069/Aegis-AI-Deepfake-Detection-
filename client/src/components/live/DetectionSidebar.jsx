@@ -16,9 +16,12 @@ export default function DetectionSidebar({ latestResult, logs, timelineData, con
   const faceCount = latestResult?.face_count ?? 0;
   const processingTime = latestResult?.processing_time_ms ?? 0;
 
-  // Auto-scroll logs
+  // Auto-scroll logs (container only — never scroll the page itself)
   useEffect(() => {
-    logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const el = logsEndRef.current;
+    if (el?.parentElement) {
+      el.parentElement.scrollTop = el.parentElement.scrollHeight;
+    }
   }, [logs]);
 
   // Score colors

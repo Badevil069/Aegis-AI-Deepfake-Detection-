@@ -7,22 +7,25 @@ import { howItWorksSteps } from '../data/mockData';
 const icons = [Camera, Cpu, Radar, FileCheck2];
 
 const pipelineSteps = [
-  { label: 'Input', color: 'from-brand-cyan to-brand-blue' },
-  { label: 'Analysis', color: 'from-brand-blue to-brand-indigo' },
-  { label: 'Detection', color: 'from-brand-indigo to-brand-violet' },
-  { label: 'Output', color: 'from-brand-violet to-brand-magenta' },
+  { label: 'Input', color: 'from-cyan-500 to-blue-500' },
+  { label: 'Analysis', color: 'from-blue-500 to-indigo-500' },
+  { label: 'Detection', color: 'from-indigo-500 to-violet-500' },
+  { label: 'Output', color: 'from-violet-500 to-fuchsia-500' },
 ];
 
 export default function HowItWorksPage() {
   return (
     <PageTransition className="space-y-14 py-12">
+      {/* Mesh background glow */}
+      <div className="pointer-events-none fixed inset-0 z-0 mesh-bg opacity-40" />
+
       {/* Header */}
-      <section className="text-center">
+      <section className="relative z-10 text-center">
         <div className="mb-3 flex justify-center">
           <span className="cyber-badge cyber-badge-glow">How It Works</span>
         </div>
-        <h1 className="font-display text-4xl font-bold text-white md:text-5xl">
-          AI-Driven <span className="glow-text">Detection Pipeline</span>
+        <h1 className="font-display text-4xl font-bold text-white md:text-5xl deepshield-glow-text">
+          AI-Driven <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">Detection Pipeline</span>
         </h1>
         <p className="mx-auto mt-4 max-w-3xl text-base text-slate-400">
           The platform combines visual, acoustic, and temporal forensics to estimate deepfake likelihood and provide actionable confidence-based reports.
@@ -30,8 +33,8 @@ export default function HowItWorksPage() {
       </section>
 
       {/* Pipeline visual */}
-      <section className="hidden md:block">
-        <div className="glass-card p-8">
+      <section className="relative z-10 hidden md:block">
+        <div className="deepshield-feature-card p-8">
           <p className="mb-6 text-center text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
             Detection Pipeline Flow
           </p>
@@ -45,7 +48,7 @@ export default function HowItWorksPage() {
                   transition={{ delay: idx * 0.15, duration: 0.4 }}
                   className="flex flex-col items-center gap-2 flex-1"
                 >
-                  <div className={`flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br ${step.color} bg-opacity-20`}>
+                  <div className={`flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br ${step.color} bg-opacity-20 shadow-[0_0_15px_rgba(0,242,255,0.1)]`}>
                     {(() => {
                       const Icon = icons[idx];
                       return <Icon className="h-6 w-6 text-white" strokeWidth={1.5} />;
@@ -62,7 +65,7 @@ export default function HowItWorksPage() {
                     transition={{ delay: idx * 0.15 + 0.1, duration: 0.3 }}
                     className="mb-6"
                   >
-                    <ArrowRight className="h-5 w-5 text-slate-600" />
+                    <ArrowRight className="h-5 w-5 text-cyan-400/40" />
                   </motion.div>
                 )}
               </div>
@@ -76,14 +79,14 @@ export default function HowItWorksPage() {
               whileInView={{ width: '100%' }}
               viewport={{ once: true }}
               transition={{ duration: 1.5, ease: 'easeOut' }}
-              className="h-full rounded-full bg-gradient-to-r from-brand-cyan via-brand-indigo to-brand-violet"
+              className="h-full rounded-full bg-gradient-to-r from-cyan-500 via-indigo-500 to-violet-500"
             />
           </div>
         </div>
       </section>
 
       {/* Step cards */}
-      <section className="grid gap-5 md:grid-cols-2">
+      <section className="relative z-10 grid gap-5 md:grid-cols-2">
         {howItWorksSteps.map((step, idx) => (
           <InfoCard
             key={step.title}
@@ -97,16 +100,16 @@ export default function HowItWorksPage() {
       </section>
 
       {/* Technical specs */}
-      <section className="glass-card p-6">
-        <h2 className="text-xl font-semibold text-white mb-5">Technical Specifications</h2>
+      <section className="relative z-10 deepshield-feature-card p-6">
+        <h2 className="text-xl font-semibold text-white mb-5 deepshield-glow-text">Technical Specifications</h2>
         <div className="grid gap-4 md:grid-cols-3">
           {[
             { label: 'Detection Models', value: 'EfficientNet-B4, LSTM-Attention, WavLM', desc: 'Multi-architecture ensemble' },
             { label: 'Processing Speed', value: '< 6.4 seconds', desc: 'Average end-to-end latency' },
             { label: 'Supported Formats', value: 'MP4, AVI, MP3, WAV, JPG, PNG', desc: 'Cross-modal input support' },
           ].map((spec) => (
-            <div key={spec.label} className="rounded-xl border border-white/6 bg-black/20 p-4">
-              <p className="text-[10px] uppercase tracking-[0.18em] text-slate-600">{spec.label}</p>
+            <div key={spec.label} className="rounded-xl border border-cyan-500/10 bg-black/30 p-4 hover:border-cyan-500/30 transition-colors">
+              <p className="text-[10px] uppercase tracking-[0.18em] text-cyan-400/60">{spec.label}</p>
               <p className="mt-2 text-lg font-semibold text-white">{spec.value}</p>
               <p className="mt-1 text-xs text-slate-500">{spec.desc}</p>
             </div>

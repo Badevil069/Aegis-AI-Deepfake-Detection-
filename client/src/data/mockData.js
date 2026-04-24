@@ -1,10 +1,9 @@
 export const navItems = [
   { label: 'Home', path: '/' },
-  { label: 'How It Works', path: '/how-it-works' },
-  { label: 'Detect', path: '/detect' },
-  { label: 'Live', path: '/live' },
-  { label: 'Results', path: '/results' },
-  { label: 'Use Cases', path: '/use-cases' },
+  { label: 'Detection', path: '/detect' },
+  { label: 'Monitoring', path: '/live' },
+  { label: 'Dashboard', path: '/results' },
+  { label: 'Coming Soon', path: '/use-cases' },
   { label: 'Contact', path: '/contact' },
 ];
 

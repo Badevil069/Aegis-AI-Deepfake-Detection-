@@ -6,23 +6,28 @@ export default defineConfig({
   server: {
     proxy: {
       '/analyze-frame': {
-        target: 'http://localhost:8001',
+        target: 'http://127.0.0.1:8001',
         changeOrigin: true,
       },
-      '/analyze-stream': {
-        target: 'http://localhost:8001',
+      '/start-detection': {
+        target: 'http://127.0.0.1:8001',
         changeOrigin: true,
       },
-      '/stop-stream': {
-        target: 'http://localhost:8001',
+      '/stop-detection': {
+        target: 'http://127.0.0.1:8001',
+        changeOrigin: true,
+      },
+      '/ws/live': {
+        target: 'ws://127.0.0.1:8001',
+        ws: true,
         changeOrigin: true,
       },
       '/api': {
-        target: 'http://localhost:8001',
+        target: 'http://127.0.0.1:8001',
         changeOrigin: true,
       },
       '/socket.io': {
-        target: 'http://localhost:8001',
+        target: 'http://127.0.0.1:8001',
         changeOrigin: true,
         ws: true,
       },

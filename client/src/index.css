@@ -51,7 +51,7 @@ body {
   margin: 0;
   font-family: 'Space Grotesk', 'Inter', system-ui, sans-serif;
   color: var(--text-primary);
-  background: var(--app-bg);
+  background: #02040a;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -462,4 +462,665 @@ a {
   .glass-card {
     border-radius: 12px;
   }
+}
+
+/* ══════════════════════════════════════════════════════
+   DEEPSHIELD AI — DESIGN SYSTEM
+   ══════════════════════════════════════════════════════ */
+
+/* ─── Material Symbols baseline ─── */
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+/* ─── Custom Cursor ─── */
+@media (pointer: fine) {
+  body {
+    cursor: none;
+  }
+  a, button, input, .interactive {
+    cursor: none;
+  }
+}
+
+#cursor-aura {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, rgba(0,242,255,0.15) 0%, rgba(0,128,255,0.05) 40%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  z-index: 9999;
+  transition: width 0.3s, height 0.3s, background 0.3s;
+  mix-blend-mode: screen;
+}
+
+#cursor-dot {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 8px;
+  height: 8px;
+  background: #00f2ff;
+  border-radius: 50%;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  z-index: 10000;
+  box-shadow: 0 0 10px #00f2ff, 0 0 20px #00f2ff;
+  transition: transform 0.1s;
+}
+
+.cursor-hover #cursor-aura {
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, rgba(0,242,255,0.2) 0%, rgba(0,128,255,0.1) 50%, transparent 80%);
+}
+
+.cursor-hover #cursor-dot {
+  transform: translate(-50%, -50%) scale(1.5);
+  background: #fff;
+  box-shadow: 0 0 15px #fff, 0 0 30px #00f2ff;
+}
+
+/* ─── Neural Network Grid Background ─── */
+.neural-grid-bg {
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background-image:
+    linear-gradient(rgba(0, 242, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 242, 255, 0.05) 1px, transparent 1px);
+  background-size: 50px 50px;
+  transform: perspective(500px) rotateX(60deg) translateY(-100px) translateZ(-200px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ─── Mesh Gradient Background ─── */
+.mesh-bg {
+  background-color: transparent;
+  background-image:
+    radial-gradient(at 40% 20%, hsla(188,100%,74%,0.15) 0px, transparent 50%),
+    radial-gradient(at 80% 0%, hsla(189,100%,56%,0.15) 0px, transparent 50%),
+    radial-gradient(at 0% 50%, hsla(215,100%,60%,0.15) 0px, transparent 50%),
+    radial-gradient(at 80% 100%, hsla(240,100%,70%,0.1) 0px, transparent 50%),
+    radial-gradient(at 0% 0%, hsla(188,100%,50%,0.1) 0px, transparent 50%);
+}
+
+/* ─── Floating Orbs ─── */
+.orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(60px);
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* ─── DeepShield Glow Text ─── */
+.deepshield-glow-text {
+  text-shadow: 0 0 20px rgba(0,242,255,0.4), 0 0 40px rgba(0,128,255,0.2);
+}
+
+/* ─── Pulse Glow Animation ─── */
+@keyframes pulseGlowDS {
+  0%, 100% { filter: drop-shadow(0 0 12px rgba(0,242,255,0.6)); }
+  50% { filter: drop-shadow(0 0 25px rgba(168,85,247,0.8)); }
+}
+.animate-pulse-glow {
+  animation: pulseGlowDS 3s infinite ease-in-out;
+}
+
+/* ─── Nav Link Fantasy Hover ─── */
+.nav-link-fantasy {
+  position: relative;
+  transition: all 0.3s ease;
+}
+.nav-link-fantasy:hover {
+  text-shadow: 0 0 10px rgba(0,242,255,0.8), 0 0 20px rgba(168,85,247,0.4);
+  color: #fff !important;
+}
+.nav-link-fantasy::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #00f2ff, transparent);
+  transition: width 0.3s ease;
+}
+.nav-link-fantasy:hover::after {
+  width: 100%;
+}
+
+/* ─── DeepShield Primary Button ─── */
+.deepshield-btn-primary {
+  display: inline-block;
+  background: linear-gradient(135deg, #06b6d4, #3b82f6);
+  color: #000;
+  padding: 1rem 2rem;
+  border-radius: 0.25rem;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border: none;
+  box-shadow: 0 0 25px rgba(0,242,255,0.5);
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.deepshield-btn-primary:hover {
+  box-shadow: 0 0 40px rgba(0,242,255,0.8);
+  transform: scale(1.05);
+}
+
+/* ─── DeepShield Secondary Button ─── */
+.deepshield-btn-secondary {
+  display: inline-block;
+  background: rgba(2, 4, 10, 0.5);
+  color: #22d3ee;
+  padding: 1rem 2rem;
+  border-radius: 0.25rem;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border: 1px solid rgba(6,182,212,0.5);
+  backdrop-filter: blur(8px);
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.deepshield-btn-secondary:hover {
+  border-color: #22d3ee;
+  background: rgba(6,182,212,0.1);
+  box-shadow: inset 0 0 20px rgba(0,242,255,0.2);
+  transform: scale(1.05);
+}
+
+/* ─── DeepShield Feature Card ─── */
+.deepshield-feature-card {
+  background: rgba(19, 24, 36, 0.4);
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 12px;
+  padding: 2rem;
+  transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.deepshield-feature-card:hover {
+  border-color: rgba(6,182,212,0.5);
+  box-shadow: 0 0 30px rgba(0,242,255,0.15);
+  transform: translateY(-8px);
+}
+
+.deepshield-feature-icon {
+  height: 3.5rem;
+  width: 3.5rem;
+  border-radius: 0.5rem;
+  background: linear-gradient(135deg, rgba(6,182,212,0.2), rgba(59,130,246,0.2));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+  border: 1px solid rgba(6,182,212,0.2);
+  box-shadow: 0 0 15px rgba(0,242,255,0.1);
+  transition: all 0.3s ease;
+}
+.deepshield-feature-card:hover .deepshield-feature-icon {
+  background: linear-gradient(135deg, rgba(6,182,212,0.4), rgba(59,130,246,0.4));
+}
+
+/* ─── Selection styling for DeepShield pages ─── */
+::selection {
+  background: rgba(0, 242, 255, 0.3);
+  color: #ffffff;
+}
+
+/* ─── Shimmer animation for holographic cards ─── */
+@keyframes shimmer {
+  0%, 100% { transform: translateX(-100%) rotate(135deg); }
+  50% { transform: translateX(100%) rotate(135deg); }
+}
+
+/* ═══════════════════════════════════════════════
+   LIGHT MODE OVERRIDES
+   Activated when .light-mode is on <html>
+   ═══════════════════════════════════════════════ */
+
+/* ─── Global base ─── */
+.light-mode body,
+.light-mode {
+  background: #f0f4f8 !important;
+  color: #1e293b !important;
+}
+
+.light-mode #root {
+  background: #f0f4f8;
+}
+
+.light-mode .bg-\[\#02040a\] {
+  background: #f0f4f8 !important;
+}
+
+.light-mode .text-slate-100 {
+  color: #1e293b !important;
+}
+
+/* ─── Navbar ─── */
+.light-mode nav.fixed {
+  background: rgba(255, 255, 255, 0.88) !important;
+  border-bottom-color: rgba(0, 0, 0, 0.08) !important;
+  backdrop-filter: blur(20px) saturate(1.8);
+}
+
+.light-mode nav.fixed:hover {
+  background: rgba(255, 255, 255, 0.92) !important;
+}
+
+.light-mode nav .text-slate-400 {
+  color: #64748b !important;
+}
+
+.light-mode nav .text-cyan-400 {
+  color: #0891b2 !important;
+}
+
+.light-mode nav .text-slate-300 {
+  color: #475569 !important;
+}
+
+.light-mode nav button:hover {
+  background-color: rgba(6, 182, 212, 0.08) !important;
+}
+
+/* ─── Cards & panels ─── */
+.light-mode .deepshield-feature-card,
+.light-mode .glass-card,
+.light-mode .glass-card-elevated {
+  background: rgba(255, 255, 255, 0.85) !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 4px 20px rgba(0, 0, 0, 0.03);
+}
+
+.light-mode .deepshield-feature-card:hover,
+.light-mode .glass-card:hover,
+.light-mode .glass-card-elevated:hover {
+  border-color: rgba(6, 182, 212, 0.25) !important;
+  box-shadow: 0 4px 24px rgba(6, 182, 212, 0.08);
+}
+
+/* ─── Typography ─── */
+.light-mode .text-white {
+  color: #0f172a !important;
+}
+
+.light-mode .text-slate-200 {
+  color: #334155 !important;
+}
+
+.light-mode .text-slate-300 {
+  color: #475569 !important;
+}
+
+.light-mode .text-slate-400 {
+  color: #64748b !important;
+}
+
+.light-mode .text-slate-500 {
+  color: #94a3b8 !important;
+}
+
+.light-mode .text-slate-600 {
+  color: #94a3b8 !important;
+}
+
+.light-mode .deepshield-glow-text {
+  text-shadow: none !important;
+}
+
+.light-mode .glow-text {
+  text-shadow: none !important;
+  background: linear-gradient(135deg, #0891b2, #3b82f6) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+}
+
+/* Keep gradient text readable */
+.light-mode .text-transparent.bg-clip-text {
+  -webkit-text-fill-color: transparent !important;
+}
+
+/* ─── Backgrounds — reduce/hide dark effects ─── */
+.light-mode .mesh-bg {
+  opacity: 0.06 !important;
+}
+
+.light-mode .neural-grid-bg {
+  opacity: 0.03 !important;
+}
+
+.light-mode .app-stars {
+  opacity: 0 !important;
+}
+
+.light-mode .app-gradient-orb {
+  opacity: 0.06 !important;
+}
+
+.light-mode .orb {
+  opacity: 0.04 !important;
+}
+
+.light-mode .grid-bg {
+  opacity: 0.15 !important;
+}
+
+/* ─── Inputs ─── */
+.light-mode .cyber-input,
+.light-mode textarea.cyber-input {
+  background: #ffffff !important;
+  border-color: rgba(0, 0, 0, 0.12) !important;
+  color: #1e293b !important;
+}
+
+.light-mode .cyber-input:focus,
+.light-mode textarea.cyber-input:focus {
+  border-color: #06b6d4 !important;
+  box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.12) !important;
+}
+
+.light-mode .cyber-input::placeholder,
+.light-mode textarea.cyber-input::placeholder {
+  color: #94a3b8 !important;
+}
+
+/* ─── Buttons ─── */
+.light-mode .deepshield-btn-primary {
+  box-shadow: 0 2px 12px rgba(6, 182, 212, 0.2) !important;
+}
+
+.light-mode .deepshield-btn-secondary {
+  background: rgba(0, 0, 0, 0.03) !important;
+  border-color: rgba(0, 0, 0, 0.1) !important;
+  color: #334155 !important;
+}
+
+.light-mode .deepshield-btn-secondary:hover {
+  background: rgba(6, 182, 212, 0.06) !important;
+  border-color: #06b6d4 !important;
+  color: #0891b2 !important;
+}
+
+.light-mode .cyber-button {
+  background: linear-gradient(135deg, #06b6d4, #3b82f6) !important;
+  color: #ffffff !important;
+  border-color: transparent !important;
+  box-shadow: 0 2px 12px rgba(6, 182, 212, 0.2) !important;
+}
+
+.light-mode .cyber-button:hover {
+  box-shadow: 0 4px 20px rgba(6, 182, 212, 0.3) !important;
+}
+
+.light-mode .ghost-button {
+  background: rgba(0, 0, 0, 0.03) !important;
+  border-color: rgba(0, 0, 0, 0.1) !important;
+  color: #334155 !important;
+}
+
+.light-mode .ghost-button:hover {
+  background: rgba(6, 182, 212, 0.06) !important;
+  border-color: #06b6d4 !important;
+  color: #0891b2 !important;
+}
+
+/* ─── Cyber badges ─── */
+.light-mode .cyber-badge {
+  background: rgba(6, 182, 212, 0.06) !important;
+  border-color: rgba(6, 182, 212, 0.15) !important;
+  color: #0891b2 !important;
+}
+
+.light-mode .cyber-badge-glow {
+  box-shadow: 0 0 12px rgba(6, 182, 212, 0.1) !important;
+}
+
+/* ─── Borders & dividers ─── */
+.light-mode .border-white\/5,
+.light-mode .border-white\/6,
+.light-mode .border-white\/8,
+.light-mode .border-white\/10,
+.light-mode .border-white\/15 {
+  border-color: rgba(0, 0, 0, 0.06) !important;
+}
+
+.light-mode .border-cyan-500\/8,
+.light-mode .border-cyan-500\/10,
+.light-mode .border-cyan-500\/15,
+.light-mode .border-cyan-500\/20 {
+  border-color: rgba(6, 182, 212, 0.15) !important;
+}
+
+/* ─── Dark sub-panels ─── */
+.light-mode .bg-black\/15,
+.light-mode .bg-black\/20,
+.light-mode .bg-black\/25,
+.light-mode .bg-black\/30,
+.light-mode .bg-black\/40,
+.light-mode .bg-black\/50 {
+  background: rgba(0, 0, 0, 0.02) !important;
+}
+
+.light-mode .bg-\[\#0a0f1a\]\/60,
+.light-mode .bg-\[\#0a0f1a\]\/40,
+.light-mode .bg-\[\#0a0f1a\]\/70,
+.light-mode .bg-\[\#0a0f1a\]\/80,
+.light-mode .bg-\[\#0a0f1a\]\/95 {
+  background: rgba(255, 255, 255, 0.95) !important;
+}
+
+.light-mode .bg-\[\#060a14\]\/50 {
+  background: rgba(0, 0, 0, 0.02) !important;
+}
+
+.light-mode .bg-\[\#080b12\]\/30 {
+  background: rgba(0, 0, 0, 0.015) !important;
+}
+
+.light-mode .bg-white\/\[0\.02\],
+.light-mode .bg-white\/\[0\.03\],
+.light-mode .bg-white\/\[0\.04\] {
+  background: rgba(0, 0, 0, 0.02) !important;
+}
+
+.light-mode .bg-white\/5,
+.light-mode .bg-white\/6 {
+  background: rgba(0, 0, 0, 0.03) !important;
+}
+
+/* ─── Drop zone (UploadCard) ─── */
+.light-mode .border-dashed {
+  border-color: rgba(0, 0, 0, 0.15) !important;
+  background: rgba(6, 182, 212, 0.02) !important;
+}
+
+.light-mode .border-dashed:hover {
+  border-color: rgba(6, 182, 212, 0.3) !important;
+  background: rgba(6, 182, 212, 0.04) !important;
+}
+
+/* Upload mode selector buttons */
+.light-mode button[class*="border-brand-cyan"] {
+  border-color: rgba(6, 182, 212, 0.3) !important;
+  background: rgba(6, 182, 212, 0.06) !important;
+}
+
+.light-mode button[class*="border-white/10"] {
+  border-color: rgba(0, 0, 0, 0.08) !important;
+  background: rgba(0, 0, 0, 0.02) !important;
+}
+
+.light-mode button[class*="border-white/10"]:hover {
+  border-color: rgba(0, 0, 0, 0.15) !important;
+  background: rgba(0, 0, 0, 0.04) !important;
+}
+
+/* ─── Notification dropdown ─── */
+.light-mode [class*="shadow-\\[0_20px_60px"] {
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.12) !important;
+}
+
+/* ─── Neon shadows → soft shadows ─── */
+.light-mode .shadow-neon-cyan {
+  box-shadow: 0 2px 12px rgba(6, 182, 212, 0.12) !important;
+}
+
+.light-mode [class*="shadow-\\[0_0_20px"] {
+  box-shadow: 0 2px 8px rgba(6, 182, 212, 0.1) !important;
+}
+
+.light-mode [class*="shadow-\\[0_0_15px"] {
+  box-shadow: 0 2px 8px rgba(6, 182, 212, 0.08) !important;
+}
+
+.light-mode [class*="shadow-\\[0_0_30px"] {
+  box-shadow: 0 2px 10px rgba(6, 182, 212, 0.12) !important;
+}
+
+/* ─── Footer ─── */
+.light-mode footer {
+  background: rgba(255, 255, 255, 0.7) !important;
+  border-top-color: rgba(0, 0, 0, 0.06) !important;
+}
+
+.light-mode .bg-\[\#010206\] {
+  background: rgba(255, 255, 255, 0.7) !important;
+}
+
+.light-mode footer .text-cyan-400 {
+  color: #0891b2 !important;
+}
+
+/* ─── Mobile menu ─── */
+.light-mode .bg-\[\#02040a\]\/40,
+.light-mode .bg-\[\#02040a\]\/60,
+.light-mode .bg-\[\#02040a\]\/70,
+.light-mode .bg-\[\#02040a\]\/95 {
+  background: rgba(255, 255, 255, 0.95) !important;
+}
+
+/* ─── Processing / Loader page ─── */
+.light-mode section[class*="min-h-screen"] {
+  background: #f0f4f8 !important;
+}
+
+.light-mode .bg-\[radial-gradient\] {
+  opacity: 0.3 !important;
+}
+
+.light-mode .border-brand-cyan\/20 {
+  border-color: rgba(6, 182, 212, 0.15) !important;
+}
+
+/* ─── Custom cursor ─── */
+.light-mode .cursor-aura {
+  background: rgba(6, 182, 212, 0.06) !important;
+}
+
+.light-mode .cursor-dot {
+  background: #0891b2 !important;
+}
+
+/* ─── Live detection sidebar ─── */
+.light-mode .border-white\/6 {
+  border-color: rgba(0, 0, 0, 0.06) !important;
+}
+
+.light-mode .bg-brand-cyan\/8,
+.light-mode .bg-cyan-500\/5 {
+  background: rgba(6, 182, 212, 0.06) !important;
+}
+
+/* ─── Canvas containers (Globe & Radar) ─── */
+.light-mode canvas {
+  opacity: 0.85;
+}
+
+/* ─── Contact form labels ─── */
+.light-mode .text-cyan-400\/60 {
+  color: #0891b2 !important;
+}
+
+/* ─── Tab buttons on detect page ─── */
+.light-mode .bg-slate-800 {
+  background: rgba(0, 0, 0, 0.06) !important;
+  color: #64748b !important;
+}
+
+.light-mode .bg-slate-800:hover,
+.light-mode .hover\:bg-slate-700:hover {
+  background: rgba(0, 0, 0, 0.1) !important;
+}
+
+/* ─── Gradient backgrounds on buttons (keep as-is) ─── */
+.light-mode .from-cyan-500.to-blue-500,
+.light-mode [class*="from-cyan-500"][class*="to-blue-500"] {
+  color: #000000 !important;
+}
+
+/* ─── Scrollbar ─── */
+.light-mode ::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+.light-mode ::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+}
+
+.light-mode ::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* ─── Selection color ─── */
+.light-mode ::selection {
+  background: rgba(6, 182, 212, 0.2);
+  color: #0f172a;
+}
+
+/* ─── Countdown timer boxes ─── */
+.light-mode [class*="border-cyan-500\\/20"][class*="bg-\\[\\#0a0f1a\\]"] {
+  background: rgba(255, 255, 255, 0.9) !important;
+  border-color: rgba(6, 182, 212, 0.15) !important;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+/* ─── Progress bars remain vivid ─── */
+.light-mode .bg-gradient-to-r.from-cyan-500 {
+  opacity: 1 !important;
+}
+
+/* ─── Smooth transitions ─── */
+.light-mode * {
+  transition-property: background-color, border-color, color, box-shadow;
+  transition-duration: 0.2s;
+  transition-timing-function: ease-out;
+}
+
+/* ─── Drop shadow on logo ─── */
+.light-mode .drop-shadow-\[0_0_15px_rgba\(168\,85\,247\,0\.6\)\] {
+  filter: drop-shadow(0 0 8px rgba(6, 182, 212, 0.3)) !important;
+}
+
+.light-mode .drop-shadow-\[0_0_8px_rgba\(0\,242\,255\,0\.5\)\] {
+  filter: drop-shadow(0 0 4px rgba(6, 182, 212, 0.2)) !important;
+}
+
+/* ─── Animate pulse glow ─── */
+.light-mode .animate-pulse-glow {
+  animation: none !important;
 }

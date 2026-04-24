@@ -1,14 +1,13 @@
-import React, { useState } from 'react'; // Added useState
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Upload, ShieldCheck, Mail } from 'lucide-react'; // Added Mail icon
+import { Upload, ShieldCheck, Mail } from 'lucide-react';
 import PageTransition from '../components/PageTransition';
 import UploadCard from '../components/UploadCard';
 import { documentModeOptions } from '../data/uploadModes';
-import EmailPasteCard from '../components/EmailPasteCard'; // Import your new component
+import EmailPasteCard from '../components/EmailPasteCard';
 
 export default function DetectPage() {
   const navigate = useNavigate();
-  // New state to toggle between 'media' and 'email'
   const [activeTab, setActiveTab] = useState('media');
 
   const handleAnalyze = ({ mode, file, previewUrl, mediaKind }) => {
@@ -24,13 +23,12 @@ export default function DetectPage() {
     });
   };
 
-  // Handler for Email Analysis
   const handleEmailAnalyze = (emailContent) => {
     navigate('/processing', {
       state: {
         source: 'email',
         mode: 'text-analysis',
-        content: emailContent, // Pass the pasted text
+        content: emailContent,
         filename: 'email-source.txt',
         mediaKind: 'email',
       },
@@ -39,7 +37,10 @@ export default function DetectPage() {
 
   return (
     <PageTransition className="py-12">
-      <section className="mb-10 text-center">
+      {/* Mesh background glow */}
+      <div className="pointer-events-none fixed inset-0 z-0 mesh-bg opacity-50" />
+
+      <section className="relative z-10 mb-10 text-center">
         <div className="mb-3 flex justify-center">
           <span className="cyber-badge cyber-badge-glow">
             {activeTab === 'media' ? <Upload className="h-3 w-3" /> : <Mail className="h-3 w-3" />}
@@ -47,28 +48,28 @@ export default function DetectPage() {
           </span>
         </div>
         
-        <h1 className="font-display text-4xl font-bold text-white md:text-5xl">
-          Analyze <span className="glow-text">Video, Image, or Email</span>
+        <h1 className="font-display text-4xl font-bold text-white md:text-5xl deepshield-glow-text">
+          Analyze <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">Video, Image, or Email</span>
         </h1>
         
         {/* TAB SWITCHER */}
         <div className="mt-8 flex justify-center gap-2">
           <button 
             onClick={() => setActiveTab('media')}
-            className={`px-6 py-2 rounded-full text-sm font-medium transition-all ${
+            className={`px-6 py-2 rounded-full text-sm font-medium transition-all interactive ${
               activeTab === 'media' 
-              ? 'bg-brand-cyan text-black shadow-[0_0_15px_rgba(6,182,212,0.5)]' 
-              : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+              ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-black shadow-[0_0_15px_rgba(6,182,212,0.5)] font-bold' 
+              : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white'
             }`}
           >
             Media Upload
           </button>
           <button 
             onClick={() => setActiveTab('email')}
-            className={`px-6 py-2 rounded-full text-sm font-medium transition-all ${
+            className={`px-6 py-2 rounded-full text-sm font-medium transition-all interactive ${
               activeTab === 'email' 
-              ? 'bg-brand-cyan text-black shadow-[0_0_15px_rgba(6,182,212,0.5)]' 
-              : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+              ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-black shadow-[0_0_15px_rgba(6,182,212,0.5)] font-bold' 
+              : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white'
             }`}
           >
             Email Source
@@ -84,7 +85,7 @@ export default function DetectPage() {
         {/* Trust indicators */}
         <div className="mt-5 flex items-center justify-center gap-4 text-xs text-slate-600">
           <span className="inline-flex items-center gap-1.5">
-            <ShieldCheck className="h-3 w-3 text-brand-cyan/50" />
+            <ShieldCheck className="h-3 w-3 text-cyan-400/50" />
             Forensic grade analysis
           </span>
           <span className="h-3 w-px bg-slate-700" />
@@ -93,7 +94,7 @@ export default function DetectPage() {
       </section>
 
       {activeTab === 'media' ? (
-        <section className="grid gap-6 lg:grid-cols-2 lg:items-start">
+        <section className="relative z-10 grid gap-6 lg:grid-cols-2 lg:items-start">
           <UploadCard
             onAnalyze={handleAnalyze}
             title="Media Deepfake Detection"
@@ -111,7 +112,9 @@ export default function DetectPage() {
           />
         </section>
       ) : (
-        <EmailPasteCard onAnalyze={handleEmailAnalyze} />
+        <div className="relative z-10">
+          <EmailPasteCard onAnalyze={handleEmailAnalyze} />
+        </div>
       )}
     </PageTransition>
   );

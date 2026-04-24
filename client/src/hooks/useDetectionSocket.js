@@ -132,16 +132,81 @@ export default function useDetectionSocket() {
     }
   }, []);
 
+  const wsRef = useRef(null);
+
   // ── Start stream analysis ──
   const startStream = useCallback(async (url) => {
-    const sid = socketRef.current?.id;
     try {
-      const res = await fetch('/analyze-stream', {
+      setLatestResult(null);
+      setLogs([]);
+      setTimelineData([]);
+      setStreamStatus({ status: 'resolving', message: 'Connecting to server...' });
+
+      // 1. Establish WebSocket connection
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${protocol}//${window.location.host}/ws/live`;
+      const ws = new WebSocket(wsUrl);
+      wsRef.current = ws;
+
+      ws.onopen = () => {
+        addLog('info', 'WebSocket connected for live stream.');
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          
+          if (data.status_msg) {
+            setStreamStatus({ status: data.status_msg.toLowerCase(), message: data.message || '' });
+            const level = data.status_msg === 'Error' ? 'error' : 'info';
+            addLog(level, `Stream: ${data.status_msg} ${data.message ? '- ' + data.message : ''}`);
+            return;
+          }
+
+          if (data.fake_score !== undefined) {
+            // Map websocket data to UI format
+            const mappedResult = {
+              risk_score: Math.round(data.fake_score * 100),
+              status: data.status,
+              face_count: data.faces,
+              processing_time_ms: data.latency,
+              engine: 'vertex_ai_stream',
+              frame_number: data.frames_processed
+            };
+            
+            setLatestResult(mappedResult);
+            
+            setTimelineData((prev) => {
+              const point = {
+                time: new Date().toLocaleTimeString(),
+                score: mappedResult.risk_score,
+                timestamp: Date.now(),
+              };
+              const updated = [...prev, point];
+              return updated.slice(-50); // Maintain last 30-50 points as requested
+            });
+            
+            addLog(
+              mappedResult.status === 'FAKE' ? 'danger' : mappedResult.status === 'SUSPICIOUS' ? 'warning' : 'info',
+              `[Stream #${data.frames_processed}] Score: ${mappedResult.risk_score}% — ${mappedResult.status}`
+            );
+          }
+        } catch (e) {
+          console.error('WebSocket parse error', e);
+        }
+      };
+
+      ws.onerror = () => addLog('error', 'WebSocket error occurred.');
+      ws.onclose = () => addLog('warning', 'WebSocket closed.');
+
+      // 2. Call start-detection endpoint
+      const res = await fetch('/start-detection', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url, sid }),
+        body: JSON.stringify({ url }),
       });
       const data = await res.json();
+      
       if (data.session_id) {
         setStreamSessionId(data.session_id);
         addLog('info', `Stream analysis started (session: ${data.session_id})`);
@@ -157,12 +222,16 @@ export default function useDetectionSocket() {
   const stopStream = useCallback(async () => {
     if (!streamSessionId) return;
     try {
-      await fetch('/stop-stream', {
+      await fetch('/stop-detection', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ session_id: streamSessionId }),
       });
       setStreamSessionId(null);
+      if (wsRef.current) {
+        wsRef.current.close();
+        wsRef.current = null;
+      }
       addLog('info', 'Stream analysis stopped.');
     } catch (err) {
       addLog('error', `Failed to stop stream: ${err.message}`);

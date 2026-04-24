@@ -20,7 +20,7 @@ from contextlib import asynccontextmanager
 import cv2
 import numpy as np
 import socketio
-from fastapi import FastAPI, File, UploadFile, HTTPException
+from fastapi import FastAPI, File, UploadFile, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
@@ -259,7 +259,111 @@ class StopStreamRequest(BaseModel):
 class EmailRequest(BaseModel):  # UPDATED: Added EmailRequest model
     email_content: str
 
-# ── Endpoints ──
+# ── Endpoints & Websockets ──
+
+live_stream_websockets = []
+
+@app.websocket("/ws/live")
+async def websocket_live_endpoint(websocket: WebSocket):
+    await websocket.accept()
+    live_stream_websockets.append(websocket)
+    try:
+        while True:
+            data = await websocket.receive_text()
+    except WebSocketDisconnect:
+        live_stream_websockets.remove(websocket)
+
+async def broadcast_stream_update(data: dict):
+    for ws in live_stream_websockets:
+        try:
+            await ws.send_json(data)
+        except Exception:
+            pass
+
+async def process_stream_task(url: str, session_id: str):
+    from engines.interceptor import LiveStreamInterceptor
+    interceptor = LiveStreamInterceptor(fps=5)
+    
+    await broadcast_stream_update({"status_msg": "extracting", "message": "Extracting stream URL..."})
+    
+    loop = asyncio.get_event_loop()
+    # Run in executor to prevent blocking
+    success = await loop.run_in_executor(None, interceptor.start_stream, url)
+    
+    if not success:
+        await broadcast_stream_update({"status_msg": "Error", "message": "Stream extraction failed or unsupported"})
+        active_streams.pop(session_id, None)
+        return
+        
+    await broadcast_stream_update({"status_msg": "processing", "message": "Opening stream..."})
+    await asyncio.sleep(0.5)
+    
+    await broadcast_stream_update({"status_msg": "Live", "message": "Stream connected. Analyzing..."})
+    
+    frames_processed = 0
+    frame_counter = 0
+    
+    while active_streams.get(session_id, {}).get("active", False):
+        frame = await loop.run_in_executor(None, interceptor.get_next_frame)
+        if frame is None:
+            await broadcast_stream_update({"status_msg": "Error", "message": "Stream disconnected"})
+            break
+            
+        frame_counter += 1
+        # Process every 10 frames
+        if frame_counter % 10 != 0:
+            continue
+            
+        start_t = time.time()
+        
+        # Check for face first to skip API
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        faces = cv_detector.face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
+        face_count = len(faces)
+        
+        if face_count == 0:
+            latency = int((time.time() - start_t) * 1000)
+            await broadcast_stream_update({
+                "fake_score": 0.0,
+                "status": "REAL",
+                "faces": 0,
+                "latency": latency,
+                "frames_processed": frames_processed
+            })
+            continue
+            
+        # Run analyze_single_frame in thread too to avoid blocking loop
+        result = await loop.run_in_executor(None, analyze_single_frame, frame)
+        latency = int((time.time() - start_t) * 1000)
+        frames_processed += 1
+        
+        score = result.get("risk_score", 0) / 100.0
+        
+        payload = {
+            "fake_score": score,
+            "status": result.get("status", "REAL"),
+            "faces": result.get("face_count", face_count),
+            "latency": latency,
+            "frames_processed": frames_processed
+        }
+        await broadcast_stream_update(payload)
+
+    interceptor.stop_stream()
+    await broadcast_stream_update({"status_msg": "Stopped"})
+    active_streams.pop(session_id, None)
+
+@app.post("/start-detection")
+async def start_detection(req: StreamRequest):
+    session_id = str(uuid.uuid4())
+    active_streams[session_id] = {"active": True}
+    asyncio.create_task(process_stream_task(req.url, session_id))
+    return {"status": "started", "session_id": session_id}
+
+@app.post("/stop-detection")
+async def stop_detection(req: StopStreamRequest):
+    if req.session_id in active_streams:
+        active_streams[req.session_id]["active"] = False
+    return {"status": "stopped"}
 
 @app.get("/")
 def health():
