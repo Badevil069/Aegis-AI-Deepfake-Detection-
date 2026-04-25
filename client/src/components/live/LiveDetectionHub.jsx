@@ -35,6 +35,7 @@ export default function LiveDetectionHub() {
     streamSessionId,
     sendFrame,
     sendWebRTCFrame,
+    ingestLiveCallResult,
     startStream,
     stopStream,
     clearData,
@@ -154,6 +155,7 @@ export default function LiveDetectionHub() {
                   joinRoom={joinRoom}
                   leaveRoom={leaveRoom}
                   sendWebRTCFrame={sendWebRTCFrame}
+                  ingestLiveCallResult={ingestLiveCallResult}
                   addLog={addLog}
                 />
               </motion.div>

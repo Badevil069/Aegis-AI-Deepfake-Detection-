@@ -1,4 +1,7 @@
 import cv2
+import logging
+import subprocess
+import sys
 try:
     import streamlink
     STREAMLINK_AVAILABLE = True
@@ -7,64 +10,151 @@ except ImportError:
 import time
 import numpy as np
 
+
+logger = logging.getLogger("aegis-stream")
+
 class LiveStreamInterceptor:
     def __init__(self, fps=5):
         self.fps = fps
         self.is_running = False
         self.cap = None
+        self.last_error = None
+
+    def _pick_stream_url(self, raw_output):
+        """Select a single playable URL from yt-dlp output."""
+        lines = [line.strip() for line in (raw_output or "").splitlines() if line.strip()]
+        if not lines:
+            return None
+
+        # Prefer HLS URLs for better compatibility with OpenCV/FFmpeg.
+        for line in lines:
+            if ".m3u8" in line:
+                return line
+        return lines[0]
+
+    def _extract_with_ytdlp(self, url):
+        """Resolve stream URL using yt-dlp from the active Python environment."""
+        commands = [
+            [
+                sys.executable,
+                "-m",
+                "yt_dlp",
+                "--no-playlist",
+                "--no-warnings",
+                "--quiet",
+                "-f",
+                "best",
+                "-g",
+                url,
+            ],
+            [
+                sys.executable,
+                "-m",
+                "yt_dlp",
+                "--no-playlist",
+                "--no-warnings",
+                "--quiet",
+                "-f",
+                "best*[vcodec!=none]/best",
+                "-g",
+                url,
+            ],
+        ]
+
+        errors = []
+        for cmd in commands:
+            try:
+                result = subprocess.run(
+                    cmd,
+                    capture_output=True,
+                    text=True,
+                    timeout=30,
+                )
+            except subprocess.TimeoutExpired:
+                errors.append("yt-dlp timed out while resolving the stream URL.")
+                continue
+            except Exception as exc:
+                errors.append(f"yt-dlp execution error: {exc}")
+                continue
+
+            if result.returncode != 0:
+                stderr = (result.stderr or "").strip()
+                stdout = (result.stdout or "").strip()
+                errors.append(stderr or stdout or f"yt-dlp exited with code {result.returncode}")
+                continue
+
+            stream_url = self._pick_stream_url(result.stdout)
+            if stream_url:
+                return stream_url
+            errors.append("yt-dlp returned no playable stream URL.")
+
+        self.last_error = " | ".join(errors) if errors else "yt-dlp could not resolve this URL."
+        return None
 
     def start_stream(self, url):
         """Connect to a stream URL."""
-        import subprocess
         self.is_running = True
+        self.last_error = None
+
+        source_url = (url or "").strip()
+        if not source_url:
+            self.last_error = "Stream URL cannot be empty."
+            self.is_running = False
+            return False
+
         try:
-            if "youtube.com" in url or "youtu.be" in url:
-                print("Starting extraction...")
+            candidates = []
+
+            if source_url.endswith(".m3u8"):
+                candidates.append(source_url)
+
+            if STREAMLINK_AVAILABLE:
                 try:
-                    result = subprocess.run(
-                        ["yt-dlp", "-f", "best", "-g", url],
-                        capture_output=True,
-                        text=True,
-                        timeout=15
-                    )
-                    if result.returncode != 0:
-                        print("yt-dlp error:", result.stderr)
-                        return False
-                    stream_url = result.stdout.strip()
-                except subprocess.TimeoutExpired:
-                    print("yt-dlp timeout")
-                    return False
-            elif url.endswith(".m3u8"):
-                stream_url = url
-            else:
-                # Fallback to streamlink if available
-                if STREAMLINK_AVAILABLE:
-                    streams = streamlink.streams(url)
-                    if not streams:
-                        stream_url = url
-                    else:
-                        stream_dict = streams.get("720p", streams.get("best"))
+                    streams = streamlink.streams(source_url)
+                    if streams:
+                        stream_dict = streams.get("720p") or streams.get("best")
                         if not stream_dict:
-                             stream_dict = list(streams.values())[-1]
-                        stream_url = stream_dict.url
-                else:
-                    stream_url = url
-            
-            if not stream_url:
-                print("Extraction failed: Stream URL is None")
-                return False
-                
-            print("Stream URL:", stream_url)
-            print("Opening video stream...")
-            self.cap = cv2.VideoCapture(stream_url)
-            
-            if not self.cap.isOpened():
-                print("Failed to open stream")
-                return False
-                
-            return True
+                            stream_dict = list(streams.values())[-1]
+                        if stream_dict and getattr(stream_dict, "url", None):
+                            candidates.append(stream_dict.url)
+                except Exception as exc:
+                    logger.warning("Streamlink resolution failed: %s", exc)
+
+            ytdlp_stream = self._extract_with_ytdlp(source_url)
+            if ytdlp_stream:
+                candidates.append(ytdlp_stream)
+
+            # Last resort: attempt the original URL directly.
+            candidates.append(source_url)
+
+            # De-duplicate while preserving order.
+            unique_candidates = list(dict.fromkeys(candidates))
+            backend = getattr(cv2, "CAP_FFMPEG", cv2.CAP_ANY)
+
+            open_errors = []
+            for stream_url in unique_candidates:
+                if not stream_url:
+                    continue
+
+                logger.info("Attempting to open stream source: %s", stream_url)
+                cap = cv2.VideoCapture(stream_url, backend)
+                if cap.isOpened():
+                    self.cap = cap
+                    return True
+
+                cap.release()
+                open_errors.append(f"OpenCV could not open: {stream_url}")
+
+            if self.last_error:
+                open_errors.insert(0, self.last_error)
+
+            self.last_error = " | ".join(open_errors) if open_errors else "No valid stream source found."
+            self.is_running = False
+            return False
         except Exception as e:
-            print(f"Error starting stream: {e}")
+            self.last_error = f"Error starting stream: {e}"
+            logger.exception("Error starting stream")
+            self.is_running = False
             return False
 
     def get_next_frame(self):
@@ -83,6 +173,7 @@ class LiveStreamInterceptor:
         self.is_running = False
         if self.cap:
             self.cap.release()
+            self.cap = None
 
 # --- WebRTC Extensions ---
 try:

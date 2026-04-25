@@ -273,6 +273,87 @@ async def websocket_live_endpoint(websocket: WebSocket):
     except WebSocketDisconnect:
         live_stream_websockets.remove(websocket)
 
+@app.websocket("/ws/live-call")
+async def websocket_live_call_endpoint(websocket: WebSocket):
+    await websocket.accept()
+    loop = asyncio.get_event_loop()
+
+    try:
+        while True:
+            data = await websocket.receive_json()
+
+            if data.get("type") != "frame":
+                continue
+
+            b64_frame = data.get("image", "")
+            room = data.get("room", "default")
+            user = data.get("user", "anonymous")
+
+            start_t = time.time()
+            frame = cv_detector.decode_base64_frame(b64_frame)
+
+            if frame is None:
+                await websocket.send_json({
+                    "user": user,
+                    "room": room,
+                    "error": "Could not decode frame",
+                })
+                continue
+
+            # Fast face gate: skip expensive analysis when no face is visible.
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            faces = cv_detector.face_cascade.detectMultiScale(
+                gray,
+                scaleFactor=1.1,
+                minNeighbors=5,
+                minSize=(30, 30),
+            )
+            face_count = len(faces)
+
+            if face_count == 0:
+                latency = int((time.time() - start_t) * 1000)
+                await websocket.send_json({
+                    "user": user,
+                    "room": room,
+                    "fake_score": 0.0,
+                    "status": "REAL",
+                    "faces": 0,
+                    "latency": latency,
+                    "engine": "face_gate",
+                    "skipped_no_face": True,
+                })
+                continue
+
+            result = await loop.run_in_executor(None, analyze_single_frame, frame)
+            latency = int((time.time() - start_t) * 1000)
+
+            # Decision policy required by live-call mode.
+            score = max(0.0, min(1.0, result.get("risk_score", 0) / 100.0))
+            if score > 0.8:
+                status = "FAKE"
+            elif score > 0.5:
+                status = "SUSPICIOUS"
+            else:
+                status = "REAL"
+
+            await websocket.send_json({
+                "user": user,
+                "room": room,
+                "fake_score": score,
+                "status": status,
+                "faces": result.get("face_count", face_count),
+                "latency": latency,
+                "engine": result.get("engine", "cv_fallback"),
+            })
+    except WebSocketDisconnect:
+        logger.info("Live call websocket disconnected")
+    except Exception as e:
+        logger.exception("Live call websocket error: %s", e)
+        try:
+            await websocket.send_json({"error": str(e)})
+        except Exception:
+            pass
+
 async def broadcast_stream_update(data: dict):
     for ws in live_stream_websockets:
         try:
@@ -291,7 +372,8 @@ async def process_stream_task(url: str, session_id: str):
     success = await loop.run_in_executor(None, interceptor.start_stream, url)
     
     if not success:
-        await broadcast_stream_update({"status_msg": "Error", "message": "Stream extraction failed or unsupported"})
+        failure_reason = interceptor.last_error or "Stream extraction failed or unsupported"
+        await broadcast_stream_update({"status_msg": "Error", "message": failure_reason})
         active_streams.pop(session_id, None)
         return
         
@@ -470,6 +552,6 @@ combined_app = socketio.ASGIApp(sio, other_asgi_app=app)
 
 if __name__ == "__main__":
     import uvicorn
-    port = int(os.getenv("BACKEND_PORT", "8000"))
+    port = int(os.getenv("BACKEND_PORT", "8001"))
     logger.info(f"Starting Aegis Sentinel on port {port}")
     uvicorn.run(combined_app, host="0.0.0.0", port=port, log_level="info")

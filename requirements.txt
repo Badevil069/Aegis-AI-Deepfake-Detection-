@@ -6,6 +6,7 @@ google-cloud-vision
 google-cloud-pubsub
 google-cloud-aiplatform
 python-dotenv
+mail-parser
 python-socketio
 websockets
 numpy

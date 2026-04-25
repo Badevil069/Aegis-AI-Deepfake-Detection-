@@ -31,8 +31,19 @@ export default function useWebRTC(socket, connected) {
       setLocalStream(stream);
       return stream;
     } catch (err) {
-      console.error('getUserMedia error:', err);
-      return null;
+      console.warn('getUserMedia(video+audio) failed, retrying with video-only:', err);
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { width: 640, height: 480, facingMode: 'user' },
+          audio: false,
+        });
+        localStreamRef.current = stream;
+        setLocalStream(stream);
+        return stream;
+      } catch (fallbackErr) {
+        console.error('getUserMedia(video-only) failed:', fallbackErr);
+        return null;
+      }
     }
   }, []);
 
@@ -109,14 +120,15 @@ export default function useWebRTC(socket, connected) {
   // ── Join room ──
   const joinRoom = useCallback(
     async (room, username) => {
-      if (!socket || !connected) return;
+      if (!socket || !connected) return false;
 
       const stream = await startLocalMedia();
-      if (!stream) return;
+      if (!stream) return false;
 
       setRoomId(room);
       socket.emit('join_room', { room_id: room, username });
       setInRoom(true);
+      return true;
     },
     [socket, connected, startLocalMedia],
   );

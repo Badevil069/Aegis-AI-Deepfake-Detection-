@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Globe, Link2, Loader2, Play, Square, AlertCircle } from 'lucide-react';
 
@@ -10,6 +10,13 @@ import { Globe, Link2, Loader2, Play, Square, AlertCircle } from 'lucide-react';
 export default function StreamMode({ startStream, stopStream, streamStatus, streamSessionId, addLog }) {
   const [url, setUrl] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+
+  useEffect(() => {
+    const status = (streamStatus?.status || '').toLowerCase();
+    if (status === 'error' || status === 'stopped') {
+      setIsAnalyzing(false);
+    }
+  }, [streamStatus?.status]);
 
   const handleStart = useCallback(async () => {
     if (!url.trim()) {
@@ -36,8 +43,11 @@ export default function StreamMode({ startStream, stopStream, streamStatus, stre
   const phaseLabel = {
     idle: 'Ready',
     resolving: 'Resolving URL...',
+    extracting: 'Extracting URL...',
     connecting: 'Connecting to stream...',
+    processing: 'Connecting to stream...',
     analyzing: 'Analyzing frames...',
+    live: 'Analyzing frames...',
     error: 'Error',
     stopped: 'Stopped',
   }[phase] || phase;
@@ -132,7 +142,14 @@ export default function StreamMode({ startStream, stopStream, streamStatus, stre
         {isAnalyzing && (
           <div className="mt-4 flex items-center gap-2">
             {['yt-dlp', 'FFmpeg', 'CV Engine', 'Results'].map((step, idx) => {
-              const activeIdx = { resolving: 0, connecting: 1, analyzing: 2 }[phase] ?? 3;
+              const activeIdx = {
+                resolving: 0,
+                extracting: 0,
+                connecting: 1,
+                processing: 1,
+                analyzing: 2,
+                live: 2,
+              }[phase] ?? 3;
               const isActive = idx <= activeIdx;
               return (
                 <div key={step} className="flex items-center gap-2 flex-1">

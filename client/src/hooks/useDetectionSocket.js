@@ -115,6 +115,37 @@ export default function useDetectionSocket() {
     });
   }, []);
 
+  // ── Ingest live-call websocket result ──
+  const ingestLiveCallResult = useCallback((data) => {
+    if (!data) return;
+    if (data.error) {
+      addLog('error', `Live Call error: ${data.error}`);
+      return;
+    }
+
+    const riskScore = Math.round((Number(data.fake_score) || 0) * 100);
+    const mappedResult = {
+      risk_score: riskScore,
+      status: data.status || (riskScore >= 80 ? 'FAKE' : riskScore >= 50 ? 'SUSPICIOUS' : 'REAL'),
+      face_count: Number(data.faces) || 0,
+      processing_time_ms: Number(data.latency) || 0,
+      engine: data.engine || 'live_call',
+      room: data.room,
+      user: data.user,
+    };
+
+    setLatestResult(mappedResult);
+    addTimelinePoint(mappedResult);
+    addLog(
+      mappedResult.status === 'FAKE' ? 'danger' : mappedResult.status === 'SUSPICIOUS' ? 'warning' : 'info',
+      `[Live Call] ${mappedResult.user || 'participant'}: ${mappedResult.risk_score}% — ${mappedResult.status} (faces: ${mappedResult.face_count}, ${mappedResult.processing_time_ms}ms)`,
+    );
+
+    if (mappedResult.risk_score > 80) {
+      addLog('danger', 'Possible Deepfake Detected');
+    }
+  }, [addLog, addTimelinePoint]);
+
   // ── Send webcam frame ──
   const sendFrame = useCallback((base64Frame) => {
     if (socketRef.current?.connected) {
@@ -142,6 +173,11 @@ export default function useDetectionSocket() {
       setTimelineData([]);
       setStreamStatus({ status: 'resolving', message: 'Connecting to server...' });
 
+      if (wsRef.current) {
+        wsRef.current.close();
+        wsRef.current = null;
+      }
+
       // 1. Establish WebSocket connection
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const wsUrl = `${protocol}//${window.location.host}/ws/live`;
@@ -157,9 +193,14 @@ export default function useDetectionSocket() {
           const data = JSON.parse(event.data);
           
           if (data.status_msg) {
-            setStreamStatus({ status: data.status_msg.toLowerCase(), message: data.message || '' });
+            const status = data.status_msg.toLowerCase();
+            setStreamStatus({ status, message: data.message || '' });
             const level = data.status_msg === 'Error' ? 'error' : 'info';
             addLog(level, `Stream: ${data.status_msg} ${data.message ? '- ' + data.message : ''}`);
+
+            if (status === 'error' || status === 'stopped') {
+              setStreamSessionId(null);
+            }
             return;
           }
 
@@ -207,10 +248,18 @@ export default function useDetectionSocket() {
       });
       const data = await res.json();
       
-      if (data.session_id) {
-        setStreamSessionId(data.session_id);
-        addLog('info', `Stream analysis started (session: ${data.session_id})`);
+      if (!data.session_id) {
+        setStreamStatus({ status: 'error', message: data?.error || 'Failed to initialize stream session.' });
+        addLog('error', data?.error || 'Failed to initialize stream session.');
+        if (wsRef.current) {
+          wsRef.current.close();
+          wsRef.current = null;
+        }
+        return null;
       }
+
+      setStreamSessionId(data.session_id);
+      addLog('info', `Stream analysis started (session: ${data.session_id})`);
       return data;
     } catch (err) {
       addLog('error', `Failed to start stream: ${err.message}`);
@@ -256,6 +305,7 @@ export default function useDetectionSocket() {
     streamSessionId,
     sendFrame,
     sendWebRTCFrame,
+    ingestLiveCallResult,
     startStream,
     stopStream,
     clearData,
