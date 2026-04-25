@@ -22,6 +22,8 @@ import numpy as np
 import socketio
 from fastapi import FastAPI, File, UploadFile, HTTPException, WebSocket, WebSocketDisconnect, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from dotenv import load_dotenv
 
@@ -458,17 +460,13 @@ async def stop_detection(req: StopStreamRequest):
         active_streams[req.session_id]["active"] = False
     return {"status": "stopped"}
 
-@app.get("/")
-def health():
+@app.get("/api/health")
+def api_health():
     return {
         "status": "Aegis Sentinel Operational",
         "engine": "vertex_ai" if ai_available else "cv_fallback",
         "active_streams": len(active_streams),
     }
-
-@app.get("/api/health")
-def api_health():
-    return {"status": "ok", "engine": "vertex_ai" if ai_available else "cv_fallback"}
 
 @app.post("/analyze-frame")
 async def analyze_frame_endpoint(req: FrameRequest):
@@ -554,6 +552,36 @@ async def analyze_evidence(file: UploadFile = File(...)):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+# ═══════════════════════════════════════════
+#  STATIC FRONTEND SERVING (For Deployment)
+# ═══════════════════════════════════════════
+
+client_dist_path = os.path.join(os.path.dirname(__file__), "client", "dist")
+
+if os.path.isdir(client_dist_path):
+    # Mount the assets directory directly
+    app.mount("/assets", StaticFiles(directory=os.path.join(client_dist_path, "assets")), name="assets")
+
+    # Catch-all route for SPA (React Router)
+    @app.api_route("/{path_name:path}", methods=["GET"])
+    async def catch_all(path_name: str):
+        if path_name.startswith("api/") or path_name.startswith("ws/") or path_name.startswith("socket.io/"):
+            raise HTTPException(status_code=404, detail="Not Found")
+            
+        file_path = os.path.join(client_dist_path, path_name)
+        if os.path.isfile(file_path):
+            return FileResponse(file_path)
+            
+        index_path = os.path.join(client_dist_path, "index.html")
+        if os.path.isfile(index_path):
+            return FileResponse(index_path)
+            
+        return {"status": "Aegis Sentinel API running (Frontend Not Built)"}
+else:
+    @app.get("/")
+    def index_fallback():
+        return {"status": "Aegis Sentinel API running. Frontend not found in client/dist."}
 
 # ═══════════════════════════════════════════
 #  ASGI APP — Mount Socket.IO
