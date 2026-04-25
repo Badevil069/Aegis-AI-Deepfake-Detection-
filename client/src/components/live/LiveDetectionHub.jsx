@@ -157,9 +157,7 @@ export default function LiveDetectionHub() {
                   leaveRoom={leaveRoom}
                   sendWebRTCFrame={sendWebRTCFrame}
                   addLog={addLog}
-                  updateLatestResult={updateLatestResult}
-                  latestResult={latestResult}
-                  timelineData={timelineData}
+                  ingestLiveCallResult={ingestLiveCallResult}
                 />
               </motion.div>
             )}

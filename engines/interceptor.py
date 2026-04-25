@@ -94,33 +94,22 @@ class LiveStreamInterceptor:
     def start_stream(self, url):
         """Connect to a stream URL."""
         self.is_running = True
+        source_url = url
+        candidates = []
         try:
-            if "youtube.com" in url or "youtu.be" in url:
-                print("Starting extraction...")
+            if not source_url:
+                self.last_error = "No stream URL provided."
+                self.is_running = False
+                return False
+
+            if source_url.endswith(".m3u8"):
+                candidates.append(source_url)
+
+            if STREAMLINK_AVAILABLE:
                 try:
-                    result = subprocess.run(
-                        ["yt-dlp", "-f", "best", "-g", url],
-                        capture_output=True,
-                        text=True,
-                        timeout=15
-                    )
-                    if result.returncode != 0:
-                        print("yt-dlp error:", result.stderr)
-                        return False
-                    stream_url = result.stdout.strip()
-                except subprocess.TimeoutExpired:
-                    print("yt-dlp timeout")
-                    return False
-            elif url.endswith(".m3u8"):
-                stream_url = url
-            else:
-                # Fallback to streamlink if available
-                if STREAMLINK_AVAILABLE:
-                    streams = streamlink.streams(url)
-                    if not streams:
-                        stream_url = url
-                    else:
-                        stream_dict = streams.get("720p", streams.get("best"))
+                    streams = streamlink.streams(source_url)
+                    if streams:
+                        stream_dict = streams.get("720p") or streams.get("best")
                         if not stream_dict:
                             stream_dict = list(streams.values())[-1]
                         if stream_dict and getattr(stream_dict, "url", None):
@@ -132,10 +121,9 @@ class LiveStreamInterceptor:
             if ytdlp_stream:
                 candidates.append(ytdlp_stream)
 
-            # Last resort: attempt the original URL directly.
-            candidates.append(source_url)
+            if source_url not in candidates:
+                candidates.append(source_url)
 
-            # De-duplicate while preserving order.
             unique_candidates = list(dict.fromkeys(candidates))
             backend = getattr(cv2, "CAP_FFMPEG", cv2.CAP_ANY)
 
@@ -159,8 +147,8 @@ class LiveStreamInterceptor:
             self.last_error = " | ".join(open_errors) if open_errors else "No valid stream source found."
             self.is_running = False
             return False
-        except Exception as e:
-            self.last_error = f"Error starting stream: {e}"
+        except Exception as exc:
+            self.last_error = f"Error starting stream: {exc}"
             logger.exception("Error starting stream")
             self.is_running = False
             return False

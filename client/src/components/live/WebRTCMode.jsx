@@ -1,21 +1,19 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Phone, PhoneOff, Users, Video, Copy, Check } from 'lucide-react';
+import { Activity, AlertTriangle, Check, Copy, Phone, PhoneOff, Users } from 'lucide-react';
 
 /**
- * WebRTCMode — multi-user video call with per-participant detection.
- * Uses WebRTC for peer-to-peer video and Socket.IO for signaling.
- * Captures frames from each video element and sends them for analysis.
+ * WebRTCMode — Live Call detection UI.
+ * Uses screen capture (primary) or webcam fallback and streams frames over WebSocket.
  */
 export default function WebRTCMode({
   socket,
   localStream,
   participants,
-  inRoom,
   joinRoom,
   leaveRoom,
-  sendWebRTCFrame,
   addLog,
+  ingestLiveCallResult,
 }) {
   const [roomInput, setRoomInput] = useState('');
   const [username, setUsername] = useState('');
@@ -23,56 +21,194 @@ export default function WebRTCMode({
   const [roomIdDisplay, setRoomIdDisplay] = useState('');
   const [copied, setCopied] = useState(false);
   const [participantScores, setParticipantScores] = useState({});
+  const [showDeepfakeAlert, setShowDeepfakeAlert] = useState(false);
+  const [joinError, setJoinError] = useState('');
 
   const localVideoRef = useRef(null);
   const remoteVideoRefs = useRef({});
   const captureRef = useRef(null);
-  const canvasRef = useRef(null);
+  const wsRef = useRef(null);
+  const captureStreamRef = useRef(null);
+  const alertTimerRef = useRef(null);
 
-  // Attach local stream to video element
+  // Attach local stream to video element when not using capture stream
   useEffect(() => {
-    if (localVideoRef.current && localStream) {
+    if (localVideoRef.current && localStream && !captureStreamRef.current) {
       localVideoRef.current.srcObject = localStream;
     }
   }, [localStream]);
 
-  // Frame capture loop for all participants
+  // Cleanup on unmount
   useEffect(() => {
-    if (!inRoom) return;
-
-    const canvas = document.createElement('canvas');
-    canvasRef.current = canvas;
-
-    captureRef.current = setInterval(() => {
-      // Capture local video frame
-      if (localVideoRef.current && localVideoRef.current.readyState >= 2) {
-        canvas.width = localVideoRef.current.videoWidth || 640;
-        canvas.height = localVideoRef.current.videoHeight || 480;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(localVideoRef.current, 0, 0);
-        const frame = canvas.toDataURL('image/jpeg', 0.6);
-        sendWebRTCFrame(frame, socket?.id || 'local');
-      }
-
-      // Capture remote participant frames
-      Object.entries(remoteVideoRefs.current).forEach(([sid, videoEl]) => {
-        if (videoEl && videoEl.readyState >= 2) {
-          canvas.width = videoEl.videoWidth || 320;
-          canvas.height = videoEl.videoHeight || 240;
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(videoEl, 0, 0);
-          const frame = canvas.toDataURL('image/jpeg', 0.6);
-          sendWebRTCFrame(frame, sid);
-        }
-      });
-    }, 1000); // Capture every 1s per participant
-
     return () => {
       if (captureRef.current) clearInterval(captureRef.current);
+      if (alertTimerRef.current) clearTimeout(alertTimerRef.current);
+      if (captureStreamRef.current) {
+        captureStreamRef.current.getTracks().forEach((track) => track.stop());
+        captureStreamRef.current = null;
+      }
+      if (wsRef.current) {
+        wsRef.current.close();
+        wsRef.current = null;
+      }
     };
-  }, [inRoom, sendWebRTCFrame, socket]);
+  }, []);
 
-  // Listen for per-participant detection results
+  const getStatusColor = useCallback((status) => {
+    if (status === 'FAKE') return 'border-rose-500/30 bg-rose-500/10';
+    if (status === 'SUSPICIOUS') return 'border-amber-500/30 bg-amber-500/10';
+    return 'border-emerald-500/20 bg-emerald-500/5';
+  }, []);
+
+  const getStatusBadge = useCallback((score, status) => {
+    const badgeColor = status === 'FAKE'
+      ? 'border-rose-400/30 bg-rose-400/10 text-rose-200'
+      : status === 'SUSPICIOUS'
+        ? 'border-amber-400/30 bg-amber-400/10 text-amber-200'
+        : 'border-emerald-400/30 bg-emerald-400/10 text-emerald-200';
+    return (
+      <span className={`rounded-full border px-2 py-1 text-[10px] font-medium ${badgeColor}`}>
+        {score}% {status}
+      </span>
+    );
+  }, []);
+
+  const startScreenCapture = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getDisplayMedia({
+        video: true,
+        audio: false,
+      });
+
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = stream;
+        await localVideoRef.current.play();
+      }
+      return stream;
+    } catch (err) {
+      return null;
+    }
+  }, []);
+
+  const startWebcam = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: false,
+      });
+
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = stream;
+        await localVideoRef.current.play();
+      }
+      return stream;
+    } catch (err) {
+      return null;
+    }
+  }, []);
+
+  const stopDetection = useCallback(() => {
+    setIsRunning(false);
+
+    if (captureRef.current) {
+      clearInterval(captureRef.current);
+      captureRef.current = null;
+    }
+
+    if (captureStreamRef.current) {
+      captureStreamRef.current.getTracks().forEach((track) => track.stop());
+      captureStreamRef.current = null;
+    }
+
+    if (wsRef.current) {
+      wsRef.current.close();
+      wsRef.current = null;
+    }
+
+    setParticipantScores({});
+    setShowDeepfakeAlert(false);
+    leaveRoom();
+    addLog?.('info', 'Live call detection stopped.');
+  }, [addLog, leaveRoom]);
+
+  const startDetection = useCallback(async (room, name) => {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.host}/ws/live-call`;
+    const ws = new WebSocket(wsUrl);
+    wsRef.current = ws;
+
+    const stream = (await startScreenCapture()) || (await startWebcam());
+    if (!stream) {
+      setIsRunning(false);
+      addLog?.('error', 'Unable to access screen or webcam for live call detection.');
+      return;
+    }
+
+    captureStreamRef.current = stream;
+
+    ws.onopen = () => {
+      addLog?.('info', 'Live call detection channel connected.');
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        ingestLiveCallResult?.(data);
+
+        const riskScore = Math.round((Number(data.fake_score) || 0) * 100);
+        setParticipantScores((prev) => ({
+          ...prev,
+          local: {
+            score: riskScore,
+            status: data.status || 'REAL',
+          },
+        }));
+
+        if ((Number(data.fake_score) || 0) > 0.8) {
+          setShowDeepfakeAlert(true);
+          if (alertTimerRef.current) clearTimeout(alertTimerRef.current);
+          alertTimerRef.current = setTimeout(() => setShowDeepfakeAlert(false), 4000);
+          addLog?.('danger', 'Possible Deepfake Detected');
+        }
+      } catch (err) {
+        addLog?.('error', 'Live call response parsing failed.');
+      }
+    };
+
+    ws.onerror = () => {
+      addLog?.('error', 'Live call WebSocket error.');
+    };
+
+    ws.onclose = () => {
+      addLog?.('warning', 'Live call WebSocket closed.');
+    };
+
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+
+    captureRef.current = setInterval(() => {
+      if (!localVideoRef.current || localVideoRef.current.readyState < 2) return;
+      if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
+
+      canvas.width = 320;
+      canvas.height = 240;
+      ctx.drawImage(localVideoRef.current, 0, 0, 320, 240);
+      const image = canvas.toDataURL('image/jpeg');
+
+      wsRef.current.send(JSON.stringify({
+        type: 'frame',
+        image,
+        room: room,
+        user: name,
+      }));
+    }, 2000);
+
+    stream.getVideoTracks()[0].onended = () => {
+      stopDetection();
+    };
+  }, [addLog, ingestLiveCallResult, startScreenCapture, startWebcam, stopDetection]);
+
+  // Listen for per-participant detection results (webrtc side)
   useEffect(() => {
     if (!socket) return;
 
@@ -99,20 +235,29 @@ export default function WebRTCMode({
   }, []);
 
   // Join
-  const handleJoin = useCallback(() => {
-    const room = roomInput.trim() || `aegis-${Math.random().toString(36).slice(2, 8)}`;
-    const name = username.trim() || `Analyst-${Math.random().toString(36).slice(2, 5)}`;
-    setRoomIdDisplay(room);
-    joinRoom(room, name);
-    addLog?.('info', `Joining room "${room}" as "${name}"...`);
-  }, [roomInput, username, joinRoom, addLog]);
+  const handleJoin = useCallback(async () => {
+    const room = roomInput.trim();
+    const name = username.trim();
 
-  // Leave
-  const handleLeave = useCallback(() => {
-    leaveRoom();
-    setParticipantScores({});
-    addLog?.('info', 'Left the room.');
-  }, [leaveRoom, addLog]);
+    if (!name) {
+      setJoinError('Name is required.');
+      addLog?.('warning', 'Please enter your name before joining.');
+      return;
+    }
+
+    if (!room) {
+      setJoinError('Room ID is required.');
+      addLog?.('warning', 'Please enter a room ID before joining.');
+      return;
+    }
+
+    setJoinError('');
+    setRoomIdDisplay(room);
+    await joinRoom(room, name);
+    setIsRunning(true);
+    addLog?.('info', `Joining room "${room}" as "${name}"...`);
+    startDetection(room, name);
+  }, [roomInput, username, joinRoom, addLog, startDetection]);
 
   const copyRoomId = useCallback(() => {
     navigator.clipboard.writeText(roomIdDisplay).then(() => {
@@ -132,44 +277,44 @@ export default function WebRTCMode({
             <h3 className="text-lg font-semibold text-white">Join Detection Room</h3>
           </div>
 
-            <div className="space-y-3">
-              <div>
-                <label className="mb-1.5 block text-[10px] font-medium uppercase tracking-wider text-slate-500">Your Name</label>
+          <div className="space-y-3">
+            <div>
+              <label className="mb-1.5 block text-[10px] font-medium uppercase tracking-wider text-slate-500">Your Name</label>
+              <input
+                value={username}
+                onChange={(e) => {
+                  setUsername(e.target.value);
+                  if (joinError) setJoinError('');
+                }}
+                placeholder="Analyst name"
+                className="cyber-input"
+              />
+            </div>
+
+            <div>
+              <label className="mb-1.5 block text-[10px] font-medium uppercase tracking-wider text-slate-500">Room ID</label>
+              <div className="flex gap-2">
                 <input
-                  value={username}
+                  value={roomInput}
                   onChange={(e) => {
-                    setUsername(e.target.value);
+                    setRoomInput(e.target.value);
                     if (joinError) setJoinError('');
                   }}
-                  placeholder="Analyst name"
-                  className="cyber-input"
+                  placeholder="Enter or generate room ID"
+                  className="cyber-input flex-1"
                 />
+                <button onClick={generateRoomId} className="ghost-button px-3 py-2 text-xs">
+                  Generate
+                </button>
               </div>
-
-              <div>
-                <label className="mb-1.5 block text-[10px] font-medium uppercase tracking-wider text-slate-500">Room ID</label>
-                <div className="flex gap-2">
-                  <input
-                    value={roomInput}
-                    onChange={(e) => {
-                      setRoomInput(e.target.value);
-                      if (joinError) setJoinError('');
-                    }}
-                    placeholder="Enter or generate room ID"
-                    className="cyber-input flex-1"
-                  />
-                  <button onClick={generateRoomId} className="ghost-button px-3 py-2 text-xs">
-                    Generate
-                  </button>
-                </div>
-              </div>
+            </div>
 
             <button
               onClick={handleJoin}
               className="cyber-button w-full inline-flex items-center justify-center gap-2 py-3 text-sm font-semibold mt-2"
             >
               <Phone className="h-4 w-4" />
-              Join Room
+              Capture the call
             </button>
           </div>
 
@@ -181,10 +326,8 @@ export default function WebRTCMode({
     );
   }
 
-  // ── In-room view ──
   return (
     <div className="space-y-3">
-      {/* Room header */}
       <div className="glass-card flex items-center justify-between px-4 py-2.5">
         <div className="flex items-center gap-3">
           <div className="cyber-badge cyber-badge-glow text-[10px]">
@@ -215,14 +358,12 @@ export default function WebRTCMode({
         )}
       </AnimatePresence>
 
-      {/* Video grid */}
       <div className={`grid gap-3 ${
         participants.length === 0 ? 'grid-cols-1' :
         participants.length <= 1 ? 'grid-cols-2' :
         'grid-cols-2'
       }`}>
-        {/* Local participant */}
-        <div className={`glass-card relative overflow-hidden p-2 ${getStatusColor(participantScores[socket?.id]?.status || 'REAL')}`}>
+        <div className={`glass-card relative overflow-hidden p-2 ${getStatusColor(participantScores.local?.status || 'REAL')}`}>
           <div className="relative aspect-video overflow-hidden rounded-xl bg-black">
             <video
               ref={localVideoRef}
@@ -231,20 +372,18 @@ export default function WebRTCMode({
               muted
               className="h-full w-full object-cover"
             />
-            {/* Overlay info */}
             <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between">
               <span className="rounded-lg bg-black/60 backdrop-blur-sm px-2 py-1 text-[10px] text-white">
                 {username || 'You'} (local)
               </span>
-              {participantScores[socket?.id] && getStatusBadge(
-                participantScores[socket.id].score,
-                participantScores[socket.id].status
+              {participantScores.local && getStatusBadge(
+                participantScores.local.score,
+                participantScores.local.status
               )}
             </div>
           </div>
         </div>
 
-        {/* Remote participants */}
         <AnimatePresence>
           {participants.map((p) => (
             <motion.div
@@ -281,7 +420,6 @@ export default function WebRTCMode({
         </AnimatePresence>
       </div>
 
-      {/* Leave button */}
       <div className="glass-card flex flex-wrap items-center justify-between gap-3 px-4 py-3">
         <div className="inline-flex items-center gap-2 text-xs text-slate-500">
           <Activity className="h-3.5 w-3.5 text-brand-cyan/70" />

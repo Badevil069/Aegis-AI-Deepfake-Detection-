@@ -17,18 +17,18 @@ export default function StreamMode({ startStream, stopStream, streamStatus, stre
       return;
     }
 
-    setIsRunning(true);
+    setIsAnalyzing(true);
     addLog?.('info', `Initiating stream analysis: ${url}`);
     const result = await startStream(url.trim());
     if (!result || result.error) {
-      setIsRunning(false);
+      setIsAnalyzing(false);
       addLog?.('error', result?.error || 'Failed to start stream.');
     }
   }, [url, startStream, addLog]);
 
   const stopDetection = useCallback(async () => {
     await stopStream();
-    setIsRunning(false);
+    setIsAnalyzing(false);
   }, [stopStream]);
 
   // Determine stream phase from status
@@ -62,10 +62,10 @@ export default function StreamMode({ startStream, stopStream, streamStatus, stre
               onChange={(e) => setUrl(e.target.value)}
               placeholder="Paste YouTube, Twitch, or HLS stream URL..."
               className="cyber-input pl-10"
-            disabled={isRunning}
+              disabled={isAnalyzing}
             />
           </div>
-          {isRunning ? (
+          {isAnalyzing ? (
             <button
               onClick={stopDetection}
               className="inline-flex items-center gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 px-5 py-2.5 text-sm font-medium text-rose-300 transition hover:bg-rose-500/20"
@@ -131,7 +131,7 @@ export default function StreamMode({ startStream, stopStream, streamStatus, stre
         </div>
 
         {/* Processing pipeline visualization */}
-        {isRunning && (
+        {isAnalyzing && (
           <div className="mt-4 flex items-center gap-2">
             {['yt-dlp', 'FFmpeg', 'CV Engine', 'Results'].map((step, idx) => {
               const activeIdx = {
@@ -160,7 +160,7 @@ export default function StreamMode({ startStream, stopStream, streamStatus, stre
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(56,189,248,0.08),transparent_55%)]" />
 
           <div className="flex h-full flex-col items-center justify-center gap-4">
-            {isRunning ? (
+            {isAnalyzing ? (
               <>
                 <motion.div
                   animate={{ scale: [1, 1.1, 1], opacity: [0.5, 1, 0.5] }}

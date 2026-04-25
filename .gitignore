@@ -1,5 +1,6 @@
 # Environments
 .env
+.env.*
 .venv
 env/
 venv/
@@ -19,6 +20,7 @@ __pycache__/
 # Secret Keys (Google Cloud credentials)
 engines/*_key.json
 secret/*.json
+*.secret.json
 
 # Jupyter Notebook
 .ipynb_checkpoints

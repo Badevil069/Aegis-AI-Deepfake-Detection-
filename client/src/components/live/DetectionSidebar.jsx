@@ -10,8 +10,9 @@ import { Activity, Clock, Cpu, ShieldAlert, TrendingUp } from 'lucide-react';
 export default function DetectionSidebar({ latestResult, logs, timelineData, connected }) {
   const logsEndRef = useRef(null);
 
-  const riskScore = latestResult?.risk_score ?? 0;
-  const status = latestResult?.status ?? 'IDLE';
+  const hasResult = Number.isFinite(latestResult?.risk_score);
+  const riskScore = hasResult ? latestResult.risk_score : 0;
+  const status = hasResult ? (latestResult?.status ?? 'IDLE') : 'IDLE';
   const engine = latestResult?.engine ?? '--';
   const faceCount = latestResult?.face_count ?? 0;
   const processingTime = latestResult?.processing_time_ms ?? 0;
@@ -36,7 +37,7 @@ export default function DetectionSidebar({ latestResult, logs, timelineData, con
   const circumference = 2 * Math.PI * radius;
   const offset = circumference - (riskScore / 100) * circumference;
   
-  const realScore = 100 - riskScore;
+  const realScore = hasResult ? 100 - riskScore : 0;
   const realOffset = circumference - (realScore / 100) * circumference;
 
   const realScoreConfig = useMemo(() => {

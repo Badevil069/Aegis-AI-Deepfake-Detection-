@@ -246,7 +246,7 @@ export default function useDetectionSocket() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url }),
       });
-      const data = await res.json();
+      const data = await response.json();
       
       if (data.session_id) {
         setStreamSessionId(data.session_id);

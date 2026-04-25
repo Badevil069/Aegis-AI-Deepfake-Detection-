@@ -296,69 +296,6 @@ async def websocket_live_endpoint(websocket: WebSocket):
             pass
 
 @app.websocket("/ws/live-call")
-async def live_call(ws: WebSocket):
-    await ws.accept()
-    try:
-        while True:
-            data = await ws.receive_json()
-            image_data = data.get("image", "")
-            if image_data.startswith("data:image"):
-                image_data = image_data.split(",")[1]
-            
-            frame = cv_detector.decode_base64_frame(image_data)
-            if frame is None:
-                continue
-            
-            start_t = time.time()
-            
-            # Skip if no face detected
-            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            faces = cv_detector.face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
-            face_count = len(faces)
-            
-            if face_count == 0:
-                latency = int((time.time() - start_t) * 1000)
-                await ws.send_json({
-                    "user": data.get("user", "User"),
-                    "room": data.get("room", "Room"),
-                    "fake_score": 0.0,
-                    "status": "REAL",
-                    "faces": 0,
-                    "latency": latency,
-                    "artifacts": ["No face detected in frame."]
-                })
-                continue
-                
-            result = analyze_single_frame(frame)
-            latency = int((time.time() - start_t) * 1000)
-            
-            score = result.get("risk_score", 0) / 100.0
-            
-            if score > 0.8:
-                status = "FAKE"
-            elif score > 0.5:
-                status = "SUSPICIOUS"
-            else:
-                status = "REAL"
-                
-            await ws.send_json({
-                "user": data.get("user", "User"),
-                "room": data.get("room", "Room"),
-                "fake_score": score,
-                "status": status,
-                "faces": result.get("face_count", 0),
-                "latency": latency,
-                "artifacts": result.get("artifacts", [])
-            })
-    except Exception as e:
-        print("WebSocket error:", e)
-    finally:
-        try:
-            await ws.close()
-        except Exception:
-            pass
-
-@app.websocket("/ws/live-call")
 async def websocket_live_call_endpoint(websocket: WebSocket):
     await websocket.accept()
     loop = asyncio.get_event_loop()
@@ -367,7 +304,7 @@ async def websocket_live_call_endpoint(websocket: WebSocket):
         while True:
             data = await websocket.receive_json()
 
-            if data.get("type") != "frame":
+            if data.get("type") and data.get("type") != "frame":
                 continue
 
             b64_frame = data.get("image", "")
