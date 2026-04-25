@@ -1,12 +1,14 @@
 import { RadioTower, Shield, Cpu, Wifi } from 'lucide-react';
 import PageTransition from '../components/PageTransition';
 import LiveDetectionHub from '../components/live/LiveDetectionHub';
+import FantasyBackground from '../components/FantasyBackground';
 
 export default function LivePage() {
   return (
-    <PageTransition className="space-y-6 py-8 md:py-12">
+    <PageTransition className="space-y-6 pt-28 pb-8 md:pb-12">
       {/* Mesh background glow */}
       <div className="pointer-events-none fixed inset-0 z-0 mesh-bg opacity-40" />
+      <FantasyBackground />
 
       {/* Page header */}
       <section className="relative z-10 text-center">

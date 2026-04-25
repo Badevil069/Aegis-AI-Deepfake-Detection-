@@ -22,16 +22,22 @@ function randomWave() {
 
 export default function LiveDetectionPanel() {
   const [isRunning, setIsRunning] = useState(false);
-  const [riskScore, setRiskScore] = useState(34);
+  const [riskScore, setRiskScore] = useState(0);
   const [micOn, setMicOn] = useState(true);
   const [camOn, setCamOn] = useState(true);
   const [logs, setLogs] = useState([
     { id: 1, text: 'Live simulation ready. Waiting for operator action.', tone: 'neutral', time: new Date().toLocaleTimeString() },
   ]);
   const [waveBars, setWaveBars] = useState(randomWave());
-  const [frameRate, setFrameRate] = useState(24);
+  const [latency, setLatency] = useState(0);
+  const [faces, setFaces] = useState(0);
   const [duration, setDuration] = useState(0);
   const logsBottomRef = useRef(null);
+
+  const videoRef = useRef(null);
+  const wsRef = useRef(null);
+  const captureIntervalRef = useRef(null);
+  const streamRef = useRef(null);
 
   const statusLabel = useMemo(() => {
     if (riskScore >= 75) return { text: 'HIGH RISK', className: 'text-rose-300 border-rose-400/30 bg-rose-400/8', dot: 'bg-rose-400' };
@@ -61,28 +67,12 @@ export default function LiveDetectionPanel() {
   }, [isRunning]);
 
   useEffect(() => {
-    if (!isRunning) return undefined;
-
-    const detectTimer = setInterval(() => {
-      setRiskScore((prev) => {
-        const drift = Math.floor(Math.random() * 14) - 4;
-        return Math.min(99, Math.max(8, prev + drift));
-      });
-
-      setFrameRate(() => Math.floor(Math.random() * 6) + 22);
-
-      setLogs((prev) => {
-        const text = liveLogSeeds[Math.floor(Math.random() * liveLogSeeds.length)];
-        const tone = text.toLowerCase().includes('anomaly') || text.toLowerCase().includes('suspicious') || text.toLowerCase().includes('drift')
-          ? 'warning'
-          : 'neutral';
-        const next = [...prev, { id: Date.now(), text, tone, time: new Date().toLocaleTimeString() }];
-        return next.slice(-20);
-      });
-    }, 1400);
-
-    return () => clearInterval(detectTimer);
-  }, [isRunning]);
+    return () => {
+      if (captureIntervalRef.current) clearInterval(captureIntervalRef.current);
+      if (streamRef.current) streamRef.current.getTracks().forEach(track => track.stop());
+      if (wsRef.current) wsRef.current.close();
+    };
+  }, []);
 
   const formatDuration = (s) => {
     const m = Math.floor(s / 60).toString().padStart(2, '0');
@@ -90,14 +80,101 @@ export default function LiveDetectionPanel() {
     return `${m}:${sec}`;
   };
 
-  const startDetection = () => {
+  const startScreenCapture = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+      }
+      return stream;
+    } catch (err) {
+      return null;
+    }
+  };
+
+  const startWebcam = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+      }
+      return stream;
+    } catch (err) {
+      return null;
+    }
+  };
+
+  const startDetection = async () => {
     setIsRunning(true);
     setDuration(0);
-    setLogs((prev) => [...prev, { id: Date.now(), text: 'Detection pipeline engaged. Streaming telemetry active.', tone: 'good', time: new Date().toLocaleTimeString() }]);
+    setLogs((prev) => [...prev, { id: Date.now(), text: 'Detection pipeline engaged. Connecting to stream...', tone: 'good', time: new Date().toLocaleTimeString() }]);
+
+    let stream = await startScreenCapture();
+    if (!stream) {
+      stream = await startWebcam();
+    }
+
+    if (!stream) {
+      setIsRunning(false);
+      setLogs((prev) => [...prev, { id: Date.now(), text: 'Capture failed. Detection aborted.', tone: 'warning', time: new Date().toLocaleTimeString() }]);
+      return;
+    }
+
+    streamRef.current = stream;
+
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.host}/ws/live-call`;
+    const ws = new WebSocket(wsUrl);
+    wsRef.current = ws;
+
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      setRiskScore(Math.round(data.fake_score * 100));
+      setFaces(data.faces);
+      setLatency(data.latency);
+
+      if (data.fake_score > 0.8) {
+        setLogs((prev) => [...prev, { id: Date.now(), text: '⚠️ Possible Deepfake Detected', tone: 'warning', time: new Date().toLocaleTimeString() }].slice(-20));
+      }
+    };
+
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+
+    const captureFrame = () => {
+      if (!videoRef.current || videoRef.current.readyState < 2) return;
+      if (ws.readyState !== WebSocket.OPEN) return;
+
+      canvas.width = 320;
+      canvas.height = 240;
+      ctx.drawImage(videoRef.current, 0, 0, 320, 240);
+
+      const image = canvas.toDataURL("image/jpeg");
+
+      ws.send(JSON.stringify({
+        type: "frame",
+        image: image,
+        room: "live-room",
+        user: "Analyst"
+      }));
+    };
+
+    captureIntervalRef.current = setInterval(captureFrame, 2000);
+
+    stream.getVideoTracks()[0].onended = () => {
+      stopDetection();
+    };
   };
 
   const stopDetection = () => {
     setIsRunning(false);
+    
+    if (captureIntervalRef.current) clearInterval(captureIntervalRef.current);
+    if (streamRef.current) streamRef.current.getTracks().forEach(track => track.stop());
+    if (wsRef.current) wsRef.current.close();
+    
     setLogs((prev) => [...prev, { id: Date.now(), text: 'Detection suspended. Snapshot retained for review.', tone: 'neutral', time: new Date().toLocaleTimeString() }]);
   };
 
@@ -124,17 +201,24 @@ export default function LiveDetectionPanel() {
             <div className="flex items-center gap-2">
               <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-black/20 px-2.5 py-1 text-[10px] text-slate-400">
                 <Activity className="h-3 w-3" />
-                {frameRate} FPS
+                {latency} ms
               </span>
               <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-black/20 px-2.5 py-1 text-[10px] text-slate-400">
                 <Users className="h-3 w-3" />
-                {participantTiles.length} participants
+                {faces} faces
               </span>
             </div>
           </div>
 
           {/* Main webcam feed */}
           <div className="relative aspect-video w-full overflow-hidden rounded-2xl border border-white/8 bg-gradient-to-br from-slate-900 via-slate-950 to-black">
+            <video 
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              className="absolute inset-0 h-full w-full object-cover z-0" 
+            />
             {/* Atmospheric overlays */}
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(56,189,248,0.12),transparent_55%)]" />
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_70%,rgba(139,92,246,0.15),transparent_50%)]" />

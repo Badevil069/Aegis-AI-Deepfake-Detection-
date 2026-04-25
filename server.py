@@ -20,7 +20,7 @@ from contextlib import asynccontextmanager
 import cv2
 import numpy as np
 import socketio
-from fastapi import FastAPI, File, UploadFile, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, File, UploadFile, HTTPException, WebSocket, WebSocketDisconnect, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
@@ -126,9 +126,22 @@ def analyze_single_frame(frame: np.ndarray) -> dict:
             result = ai_detector.analyze_frame(frame)
             score = int(result.get("confidence", 0.5) * 100)
             is_fake = result.get("is_deepfake", False)
+            
+            if score == 0 and not is_fake:
+                risk_score = 0
+            else:
+                risk_score = score if is_fake else max(5, 100 - score)
+                
+            if risk_score >= 70:
+                status = "FAKE"
+            elif risk_score >= 40:
+                status = "SUSPICIOUS"
+            else:
+                status = "REAL"
+                
             return {
-                "risk_score": score if is_fake else max(5, 100 - score),
-                "status": "FAKE" if is_fake else ("SUSPICIOUS" if score > 60 else "REAL"),
+                "risk_score": risk_score,
+                "status": status,
                 "details": result.get("details", []),
                 "face_count": 1 if result.get("biometric_baseline_match") else 0,
                 "artifacts": [d for d in result.get("details", []) if "artifact" in d.lower() or "anomal" in d.lower()],
@@ -270,8 +283,78 @@ async def websocket_live_endpoint(websocket: WebSocket):
     try:
         while True:
             data = await websocket.receive_text()
-    except WebSocketDisconnect:
-        live_stream_websockets.remove(websocket)
+    except Exception as e:
+        print("WebSocket error:", e)
+    finally:
+        if websocket in live_stream_websockets:
+            live_stream_websockets.remove(websocket)
+        try:
+            await websocket.close()
+        except Exception:
+            pass
+
+@app.websocket("/ws/live-call")
+async def live_call(ws: WebSocket):
+    await ws.accept()
+    try:
+        while True:
+            data = await ws.receive_json()
+            image_data = data.get("image", "")
+            if image_data.startswith("data:image"):
+                image_data = image_data.split(",")[1]
+            
+            frame = cv_detector.decode_base64_frame(image_data)
+            if frame is None:
+                continue
+            
+            start_t = time.time()
+            
+            # Skip if no face detected
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            faces = cv_detector.face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
+            face_count = len(faces)
+            
+            if face_count == 0:
+                latency = int((time.time() - start_t) * 1000)
+                await ws.send_json({
+                    "user": data.get("user", "User"),
+                    "room": data.get("room", "Room"),
+                    "fake_score": 0.0,
+                    "status": "REAL",
+                    "faces": 0,
+                    "latency": latency,
+                    "artifacts": ["No face detected in frame."]
+                })
+                continue
+                
+            result = analyze_single_frame(frame)
+            latency = int((time.time() - start_t) * 1000)
+            
+            score = result.get("risk_score", 0) / 100.0
+            
+            if score > 0.8:
+                status = "FAKE"
+            elif score > 0.5:
+                status = "SUSPICIOUS"
+            else:
+                status = "REAL"
+                
+            await ws.send_json({
+                "user": data.get("user", "User"),
+                "room": data.get("room", "Room"),
+                "fake_score": score,
+                "status": status,
+                "faces": result.get("face_count", 0),
+                "latency": latency,
+                "artifacts": result.get("artifacts", [])
+            })
+    except Exception as e:
+        print("WebSocket error:", e)
+    finally:
+        try:
+            await ws.close()
+        except Exception:
+            pass
 
 async def broadcast_stream_update(data: dict):
     for ws in live_stream_websockets:
@@ -353,11 +436,21 @@ async def process_stream_task(url: str, session_id: str):
     active_streams.pop(session_id, None)
 
 @app.post("/start-detection")
-async def start_detection(req: StreamRequest):
-    session_id = str(uuid.uuid4())
-    active_streams[session_id] = {"active": True}
-    asyncio.create_task(process_stream_task(req.url, session_id))
-    return {"status": "started", "session_id": session_id}
+async def start_detection(request: Request):
+    try:
+        data = await request.json()
+        url = data.get("url")
+
+        if not url:
+            return {"status": "error", "message": "No URL provided"}
+
+        session_id = str(uuid.uuid4())
+        active_streams[session_id] = {"active": True}
+        asyncio.create_task(process_stream_task(url, session_id))
+        return {"status": "success", "session_id": session_id}
+    except Exception as e:
+        print("Backend error:", str(e))
+        return {"status": "error", "message": str(e)}
 
 @app.post("/stop-detection")
 async def stop_detection(req: StopStreamRequest):

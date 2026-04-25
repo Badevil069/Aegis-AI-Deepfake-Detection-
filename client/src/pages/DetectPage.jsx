@@ -5,6 +5,7 @@ import PageTransition from '../components/PageTransition';
 import UploadCard from '../components/UploadCard';
 import { documentModeOptions } from '../data/uploadModes';
 import EmailPasteCard from '../components/EmailPasteCard';
+import FantasyBackground from '../components/FantasyBackground';
 
 export default function DetectPage() {
   const navigate = useNavigate();
@@ -36,9 +37,10 @@ export default function DetectPage() {
   };
 
   return (
-    <PageTransition className="py-12">
+    <PageTransition className="pt-28 pb-12">
       {/* Mesh background glow */}
       <div className="pointer-events-none fixed inset-0 z-0 mesh-bg opacity-50" />
+      <FantasyBackground />
 
       <section className="relative z-10 mb-10 text-center">
         <div className="mb-3 flex justify-center">

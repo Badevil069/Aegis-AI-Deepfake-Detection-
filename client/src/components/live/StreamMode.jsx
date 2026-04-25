@@ -9,26 +9,26 @@ import { Globe, Link2, Loader2, Play, Square, AlertCircle } from 'lucide-react';
  */
 export default function StreamMode({ startStream, stopStream, streamStatus, streamSessionId, addLog }) {
   const [url, setUrl] = useState('');
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isRunning, setIsRunning] = useState(false);
 
-  const handleStart = useCallback(async () => {
+  const startDetection = useCallback(async () => {
     if (!url.trim()) {
       addLog?.('warning', 'Please enter a valid stream URL.');
       return;
     }
 
-    setIsAnalyzing(true);
+    setIsRunning(true);
     addLog?.('info', `Initiating stream analysis: ${url}`);
     const result = await startStream(url.trim());
     if (!result || result.error) {
-      setIsAnalyzing(false);
+      setIsRunning(false);
       addLog?.('error', result?.error || 'Failed to start stream.');
     }
   }, [url, startStream, addLog]);
 
-  const handleStop = useCallback(async () => {
+  const stopDetection = useCallback(async () => {
     await stopStream();
-    setIsAnalyzing(false);
+    setIsRunning(false);
   }, [stopStream]);
 
   // Determine stream phase from status
@@ -36,6 +36,9 @@ export default function StreamMode({ startStream, stopStream, streamStatus, stre
   const phaseLabel = {
     idle: 'Ready',
     resolving: 'Resolving URL...',
+    extracting: 'Resolving URL...',
+    processing: 'Processing stream...',
+    live: 'Live',
     connecting: 'Connecting to stream...',
     analyzing: 'Analyzing frames...',
     error: 'Error',
@@ -60,12 +63,12 @@ export default function StreamMode({ startStream, stopStream, streamStatus, stre
               onChange={(e) => setUrl(e.target.value)}
               placeholder="Paste YouTube, Twitch, or HLS stream URL..."
               className="cyber-input pl-10"
-              disabled={isAnalyzing}
+            disabled={isRunning}
             />
           </div>
-          {isAnalyzing ? (
+          {isRunning ? (
             <button
-              onClick={handleStop}
+              onClick={stopDetection}
               className="inline-flex items-center gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 px-5 py-2.5 text-sm font-medium text-rose-300 transition hover:bg-rose-500/20"
             >
               <Square className="h-4 w-4" />
@@ -73,7 +76,7 @@ export default function StreamMode({ startStream, stopStream, streamStatus, stre
             </button>
           ) : (
             <button
-              onClick={handleStart}
+              onClick={startDetection}
               disabled={!url.trim()}
               className="cyber-button inline-flex items-center gap-2 px-5 py-2.5 text-sm disabled:opacity-40"
             >
@@ -129,7 +132,7 @@ export default function StreamMode({ startStream, stopStream, streamStatus, stre
         </div>
 
         {/* Processing pipeline visualization */}
-        {isAnalyzing && (
+        {isRunning && (
           <div className="mt-4 flex items-center gap-2">
             {['yt-dlp', 'FFmpeg', 'CV Engine', 'Results'].map((step, idx) => {
               const activeIdx = { resolving: 0, connecting: 1, analyzing: 2 }[phase] ?? 3;
@@ -151,7 +154,7 @@ export default function StreamMode({ startStream, stopStream, streamStatus, stre
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(56,189,248,0.08),transparent_55%)]" />
 
           <div className="flex h-full flex-col items-center justify-center gap-4">
-            {isAnalyzing ? (
+            {isRunning ? (
               <>
                 <motion.div
                   animate={{ scale: [1, 1.1, 1], opacity: [0.5, 1, 0.5] }}

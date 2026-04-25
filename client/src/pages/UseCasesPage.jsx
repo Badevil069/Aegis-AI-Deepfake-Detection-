@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import PageTransition from '../components/PageTransition';
 import RadarScan from '../components/RadarScan';
+import FantasyBackground from '../components/FantasyBackground';
 
 /* ─── Upcoming features — shown as locked/holographic preview cards ─── */
 const upcomingFeatures = [
@@ -219,6 +220,7 @@ export default function UseCasesPage() {
   return (
     <PageTransition className="!max-w-full !px-0 space-y-0 pb-0 pt-0">
       <div className="pointer-events-none fixed inset-0 z-0 mesh-bg opacity-40" />
+      <FantasyBackground />
 
       {/* ═══ Hero Section with Radar ═══ */}
       <section className="relative min-h-[85vh] flex items-center overflow-hidden border-b border-white/5">

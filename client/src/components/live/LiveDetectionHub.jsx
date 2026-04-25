@@ -39,6 +39,7 @@ export default function LiveDetectionHub() {
     stopStream,
     clearData,
     addLog,
+    updateLatestResult,
   } = useDetectionSocket();
 
   // WebRTC hook (manages peer connections, rooms)
@@ -147,14 +148,10 @@ export default function LiveDetectionHub() {
                 transition={{ duration: 0.2 }}
               >
                 <WebRTCMode
-                  socket={socket}
-                  localStream={localStream}
-                  participants={participants}
-                  inRoom={inRoom}
-                  joinRoom={joinRoom}
-                  leaveRoom={leaveRoom}
-                  sendWebRTCFrame={sendWebRTCFrame}
                   addLog={addLog}
+                  updateLatestResult={updateLatestResult}
+                  latestResult={latestResult}
+                  timelineData={timelineData}
                 />
               </motion.div>
             )}

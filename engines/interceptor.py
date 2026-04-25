@@ -20,19 +20,21 @@ class LiveStreamInterceptor:
         try:
             if "youtube.com" in url or "youtu.be" in url:
                 print("Starting extraction...")
+                import yt_dlp
+                ydl_opts = {
+                    'format': 'best',
+                    'quiet': True,
+                    'no_warnings': True
+                }
                 try:
-                    result = subprocess.run(
-                        ["yt-dlp", "-f", "best", "-g", url],
-                        capture_output=True,
-                        text=True,
-                        timeout=15
-                    )
-                    if result.returncode != 0:
-                        print("yt-dlp error:", result.stderr)
-                        return False
-                    stream_url = result.stdout.strip()
-                except subprocess.TimeoutExpired:
-                    print("yt-dlp timeout")
+                    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                        info = ydl.extract_info(url, download=False)
+                        stream_url = info.get('url')
+                        if not stream_url:
+                            print("yt-dlp extracted empty url")
+                            return False
+                except Exception as e:
+                    print("yt-dlp error:", e)
                     return False
             elif url.endswith(".m3u8"):
                 stream_url = url

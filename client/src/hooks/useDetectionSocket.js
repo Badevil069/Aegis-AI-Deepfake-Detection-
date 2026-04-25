@@ -200,13 +200,27 @@ export default function useDetectionSocket() {
       ws.onclose = () => addLog('warning', 'WebSocket closed.');
 
       // 2. Call start-detection endpoint
-      const res = await fetch('/start-detection', {
+      const response = await fetch('/start-detection', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url }),
       });
-      const data = await res.json();
       
+      let data;
+      
+      try {
+        data = await response.json();
+      } catch (err) {
+        console.error("Invalid JSON response");
+        setStreamStatus({ status: 'error', message: "Error: Invalid server response" });
+        return null;
+      }
+      
+      if (data.status === "error") {
+        setStreamStatus({ status: 'error', message: data.message });
+        return null;
+      }
+
       if (data.session_id) {
         setStreamSessionId(data.session_id);
         addLog('info', `Stream analysis started (session: ${data.session_id})`);
@@ -227,12 +241,48 @@ export default function useDetectionSocket() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ session_id: streamSessionId }),
       });
+      
+      // Save the final result to historical dashboard
+      setLatestResult((currentResult) => {
+        setTimelineData((currentTimeline) => {
+          if (currentResult) {
+            import('../utils/history').then(({ saveDetectionResult }) => {
+              saveDetectionResult({
+                id: `live-${streamSessionId || Date.now()}`,
+                mode: 'live',
+                source: 'stream',
+                filename: 'Live Stream Session',
+                score: currentResult.risk_score || 0,
+                label: currentResult.status || 'Real',
+                confidence: 85,
+                summary: `Live stream analysis completed with final risk score of ${currentResult.risk_score}%.`,
+                insights: currentResult.artifacts ? currentResult.artifacts.map((art, i) => ({
+                  id: `live-art-${i}`,
+                  title: art,
+                  severity: currentResult.risk_score >= 70 ? 'High' : 'Medium',
+                  confidence: 90
+                })) : [{
+                  id: 'live-art-0',
+                  title: 'No significant anomalies recorded at the time of session end.',
+                  severity: 'Low',
+                  confidence: 95
+                }],
+                timeline: currentTimeline.map((p) => p.score),
+                generatedAt: new Date().toISOString()
+              });
+            });
+          }
+          return currentTimeline;
+        });
+        return currentResult;
+      });
+
       setStreamSessionId(null);
       if (wsRef.current) {
         wsRef.current.close();
         wsRef.current = null;
       }
-      addLog('info', 'Stream analysis stopped.');
+      addLog('info', 'Stream analysis stopped. Result saved to Dashboard.');
     } catch (err) {
       addLog('error', `Failed to stop stream: ${err.message}`);
     }
@@ -245,6 +295,16 @@ export default function useDetectionSocket() {
     setTimelineData([]);
     setStreamStatus(null);
   }, []);
+
+  // ── Manual Update (For External WebSockets) ──
+  const updateLatestResult = useCallback((data) => {
+    setLatestResult(data);
+    addTimelinePoint(data);
+    addLog(
+      data.status === 'FAKE' ? 'danger' : data.status === 'SUSPICIOUS' ? 'warning' : 'info',
+      `[Screen Capture] Score: ${data.risk_score}% — ${data.status}`,
+    );
+  }, [addTimelinePoint, addLog]);
 
   return {
     socket: socketRef.current,
@@ -260,5 +320,6 @@ export default function useDetectionSocket() {
     stopStream,
     clearData,
     addLog,
+    updateLatestResult,
   };
 }

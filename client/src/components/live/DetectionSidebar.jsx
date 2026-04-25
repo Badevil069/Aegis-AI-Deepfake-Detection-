@@ -32,9 +32,16 @@ export default function DetectionSidebar({ latestResult, logs, timelineData, con
   }, [riskScore]);
 
   // SVG gauge
-  const radius = 68;
+  const radius = 52;
   const circumference = 2 * Math.PI * radius;
   const offset = circumference - (riskScore / 100) * circumference;
+  
+  const realScore = 100 - riskScore;
+  const realOffset = circumference - (realScore / 100) * circumference;
+
+  const realScoreConfig = useMemo(() => {
+    return { color: '#34d399' };
+  }, [riskScore]);
 
   return (
     <div className="flex flex-col gap-3">
@@ -62,31 +69,63 @@ export default function DetectionSidebar({ latestResult, logs, timelineData, con
           </span>
         </div>
 
-        <div className="relative mx-auto h-44 w-44">
-          <svg className="h-full w-full -rotate-90" viewBox="0 0 160 160">
-            <circle cx="80" cy="80" r={radius} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="10" />
-            <motion.circle
-              cx="80" cy="80" r={radius}
-              fill="none"
-              stroke={scoreConfig.color}
-              strokeWidth="10"
-              strokeLinecap="round"
-              strokeDasharray={circumference}
-              animate={{ strokeDashoffset: offset }}
-              transition={{ duration: 0.6, ease: 'easeOut' }}
-              style={{ filter: `drop-shadow(0 0 8px ${scoreConfig.color}40)` }}
-            />
-          </svg>
-          <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <motion.p
-              key={riskScore}
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="text-4xl font-bold text-white"
-            >
-              {riskScore}<span className="text-xl text-slate-400">%</span>
-            </motion.p>
-            <p className="mt-1 text-[9px] uppercase tracking-[0.2em] text-slate-600">Deepfake Score</p>
+        <div className="flex items-center justify-center gap-4 xl:gap-2">
+          {/* Deepfake Score */}
+          <div className="relative h-32 w-32">
+            <svg className="h-full w-full -rotate-90" viewBox="0 0 128 128">
+              <circle cx="64" cy="64" r={radius} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="8" />
+              <motion.circle
+                cx="64" cy="64" r={radius}
+                fill="none"
+                stroke={scoreConfig.color}
+                strokeWidth="8"
+                strokeLinecap="round"
+                strokeDasharray={circumference}
+                animate={{ strokeDashoffset: offset }}
+                transition={{ duration: 0.6, ease: 'easeOut' }}
+                style={{ filter: `drop-shadow(0 0 8px ${scoreConfig.color}40)` }}
+              />
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <motion.p
+                key={`fake-${riskScore}`}
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="text-2xl font-bold text-white"
+              >
+                {riskScore}<span className="text-sm text-slate-400">%</span>
+              </motion.p>
+              <p className="mt-0.5 text-[8px] uppercase tracking-[0.2em] text-slate-600">Deepfake</p>
+            </div>
+          </div>
+
+          {/* Real Score */}
+          <div className="relative h-32 w-32">
+            <svg className="h-full w-full -rotate-90" viewBox="0 0 128 128">
+              <circle cx="64" cy="64" r={radius} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="8" />
+              <motion.circle
+                cx="64" cy="64" r={radius}
+                fill="none"
+                stroke={realScoreConfig.color}
+                strokeWidth="8"
+                strokeLinecap="round"
+                strokeDasharray={circumference}
+                animate={{ strokeDashoffset: realOffset }}
+                transition={{ duration: 0.6, ease: 'easeOut' }}
+                style={{ filter: `drop-shadow(0 0 8px ${realScoreConfig.color}40)` }}
+              />
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <motion.p
+                key={`real-${realScore}`}
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="text-2xl font-bold text-white"
+              >
+                {realScore}<span className="text-sm text-slate-400">%</span>
+              </motion.p>
+              <p className="mt-0.5 text-[8px] uppercase tracking-[0.2em] text-slate-600">Real</p>
+            </div>
           </div>
         </div>
 

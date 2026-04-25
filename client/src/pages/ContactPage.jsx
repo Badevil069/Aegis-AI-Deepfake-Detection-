@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Globe, Code2, ExternalLink, Mail, MessageCircle, Send, CheckCircle2, MapPin } from 'lucide-react';
 import PageTransition from '../components/PageTransition';
+import FantasyBackground from '../components/FantasyBackground';
 
 export default function ContactPage() {
   const [submitted, setSubmitted] = useState(false);
@@ -12,8 +13,9 @@ export default function ContactPage() {
   };
 
   return (
-    <PageTransition className="space-y-10 py-12">
+    <PageTransition className="space-y-10 pt-28 pb-12">
       <div className="pointer-events-none fixed inset-0 z-0 mesh-bg opacity-40" />
+      <FantasyBackground />
 
       {/* Header */}
       <section className="relative z-10 text-center">
