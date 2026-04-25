@@ -432,6 +432,12 @@ export default function ProcessingPage() {
     if (progress < 100 || !result || didNavigate.current) return;
 
     didNavigate.current = true;
+    
+    // Save to historical dashboard
+    import('../utils/history').then(({ saveDetectionResult }) => {
+      saveDetectionResult({ ...result, timestamp: new Date().toISOString() });
+    });
+
     navigate('/results', {
       replace: true,
       state: {

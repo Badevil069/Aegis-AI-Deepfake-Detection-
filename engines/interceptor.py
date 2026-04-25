@@ -94,25 +94,33 @@ class LiveStreamInterceptor:
     def start_stream(self, url):
         """Connect to a stream URL."""
         self.is_running = True
-        self.last_error = None
-
-        source_url = (url or "").strip()
-        if not source_url:
-            self.last_error = "Stream URL cannot be empty."
-            self.is_running = False
-            return False
-
         try:
-            candidates = []
-
-            if source_url.endswith(".m3u8"):
-                candidates.append(source_url)
-
-            if STREAMLINK_AVAILABLE:
+            if "youtube.com" in url or "youtu.be" in url:
+                print("Starting extraction...")
                 try:
-                    streams = streamlink.streams(source_url)
-                    if streams:
-                        stream_dict = streams.get("720p") or streams.get("best")
+                    result = subprocess.run(
+                        ["yt-dlp", "-f", "best", "-g", url],
+                        capture_output=True,
+                        text=True,
+                        timeout=15
+                    )
+                    if result.returncode != 0:
+                        print("yt-dlp error:", result.stderr)
+                        return False
+                    stream_url = result.stdout.strip()
+                except subprocess.TimeoutExpired:
+                    print("yt-dlp timeout")
+                    return False
+            elif url.endswith(".m3u8"):
+                stream_url = url
+            else:
+                # Fallback to streamlink if available
+                if STREAMLINK_AVAILABLE:
+                    streams = streamlink.streams(url)
+                    if not streams:
+                        stream_url = url
+                    else:
+                        stream_dict = streams.get("720p", streams.get("best"))
                         if not stream_dict:
                             stream_dict = list(streams.values())[-1]
                         if stream_dict and getattr(stream_dict, "url", None):

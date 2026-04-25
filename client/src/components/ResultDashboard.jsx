@@ -5,42 +5,42 @@ import {
 } from 'lucide-react';
 
 /* ─────────── Score Gauge ─────────── */
-function ScoreGauge({ score }) {
+function ScoreGauge({ score, isRealScore = false }) {
   const normalized = Math.min(100, Math.max(0, score));
-  const radius = 74;
+  const radius = 64;
   const circumference = 2 * Math.PI * radius;
   const offset = circumference - (normalized / 100) * circumference;
 
-  const color = score >= 75
-    ? { start: '#f43f5e', end: '#ef4444', glow: 'rgba(244,63,94,0.25)' }
-    : score >= 45
-      ? { start: '#f59e0b', end: '#eab308', glow: 'rgba(245,158,11,0.25)' }
-      : { start: '#34d399', end: '#10b981', glow: 'rgba(52,211,153,0.25)' };
+  const color = isRealScore
+    ? { start: '#34d399', end: '#10b981', glow: 'rgba(52,211,153,0.25)' }
+    : (score >= 75 ? { start: '#f43f5e', end: '#ef4444', glow: 'rgba(244,63,94,0.25)' }
+       : score >= 45 ? { start: '#f59e0b', end: '#eab308', glow: 'rgba(245,158,11,0.25)' }
+       : { start: '#34d399', end: '#10b981', glow: 'rgba(52,211,153,0.25)' });
 
   return (
-    <div className="relative mx-auto h-52 w-52">
+    <div className="relative h-44 w-44 shrink-0">
       {/* Ambient glow behind gauge */}
       <div
         className="absolute inset-4 rounded-full blur-2xl opacity-40"
         style={{ background: `radial-gradient(circle, ${color.glow}, transparent 70%)` }}
       />
-      <svg className="h-full w-full -rotate-90 relative z-10" viewBox="0 0 180 180" aria-label="Deepfake Score Gauge">
+      <svg className="h-full w-full -rotate-90 relative z-10" viewBox="0 0 160 160" aria-label={isRealScore ? "Real Score Gauge" : "Deepfake Score Gauge"}>
         {/* Background track */}
-        <circle cx="90" cy="90" r={radius} fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="12" />
+        <circle cx="80" cy="80" r={radius} fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="10" />
         {/* Secondary subtle track */}
-        <circle cx="90" cy="90" r={radius} fill="none" stroke="rgba(255,255,255,0.02)" strokeWidth="20" />
+        <circle cx="80" cy="80" r={radius} fill="none" stroke="rgba(255,255,255,0.02)" strokeWidth="16" />
         {/* Animated score arc */}
         <motion.circle
-          cx="90" cy="90" r={radius} fill="none"
-          stroke="url(#gaugeGradient)" strokeWidth="12" strokeLinecap="round"
+          cx="80" cy="80" r={radius} fill="none"
+          stroke={`url(#gaugeGradient${isRealScore ? 'Real' : 'Fake'})`} strokeWidth="10" strokeLinecap="round"
           strokeDasharray={circumference}
           initial={{ strokeDashoffset: circumference }}
           animate={{ strokeDashoffset: offset }}
           transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
-          style={{ filter: `drop-shadow(0 0 12px ${color.start}50)` }}
+          style={{ filter: `drop-shadow(0 0 10px ${color.start}50)` }}
         />
         <defs>
-          <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+          <linearGradient id={`gaugeGradient${isRealScore ? 'Real' : 'Fake'}`} x1="0%" y1="0%" x2="100%" y2="0%">
             <stop offset="0%" stopColor={color.start} />
             <stop offset="100%" stopColor={color.end} />
           </linearGradient>
@@ -51,11 +51,11 @@ function ScoreGauge({ score }) {
           initial={{ opacity: 0, scale: 0.5 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.5, duration: 0.5 }}
-          className="text-5xl font-bold text-white"
+          className="text-4xl font-bold text-white"
         >
-          {normalized}<span className="text-2xl text-slate-400">%</span>
+          {normalized}<span className="text-xl text-slate-400">%</span>
         </motion.p>
-        <p className="mt-1 text-[10px] uppercase tracking-[0.2em] text-slate-500">Deepfake Score</p>
+        <p className="mt-1 text-[9px] uppercase tracking-[0.2em] text-slate-500">{isRealScore ? 'Real Score' : 'Deepfake Score'}</p>
       </div>
     </div>
   );
@@ -342,9 +342,12 @@ export default function ResultDashboard({ result, previewUrl, onDownload, onRean
         </div>
 
         {/* Right: Score + Actions */}
-        <div className="deepshield-feature-card xl:col-span-5" style={{ padding: '1.5rem' }}>
-          <ScoreGauge score={result.score} />
-          <div className="mt-6 flex flex-col items-center gap-3 text-center">
+        <div className="deepshield-feature-card xl:col-span-5 flex flex-col" style={{ padding: '1.5rem' }}>
+          <div className="flex flex-wrap items-center justify-center gap-4 xl:gap-2">
+            <ScoreGauge score={result.score} />
+            <ScoreGauge score={100 - result.score} isRealScore />
+          </div>
+          <div className="mt-6 flex flex-col items-center gap-3 text-center flex-1">
             <LabelBadge label={result.label} />
             <p className="max-w-sm text-sm leading-relaxed text-slate-400">{result.summary}</p>
             <p className="text-[10px] uppercase tracking-[0.2em] text-slate-600">

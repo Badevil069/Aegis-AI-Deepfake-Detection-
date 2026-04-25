@@ -1,0 +1,25 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+
+# Node
+client/node_modules/
+client/npm-debug.log
+client/yarn-error.log
+
+# Build outputs
+client/dist/
+
+# Environment variables
+.env
+
+# Google Cloud
+.gcloudignore

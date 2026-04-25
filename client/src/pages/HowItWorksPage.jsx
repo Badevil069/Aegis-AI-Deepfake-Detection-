@@ -3,6 +3,7 @@ import { Camera, Cpu, FileCheck2, Radar, ArrowRight } from 'lucide-react';
 import PageTransition from '../components/PageTransition';
 import InfoCard from '../components/InfoCard';
 import { howItWorksSteps } from '../data/mockData';
+import FantasyBackground from '../components/FantasyBackground';
 
 const icons = [Camera, Cpu, Radar, FileCheck2];
 
@@ -15,9 +16,10 @@ const pipelineSteps = [
 
 export default function HowItWorksPage() {
   return (
-    <PageTransition className="space-y-14 py-12">
+    <PageTransition className="space-y-14 pt-28 pb-12">
       {/* Mesh background glow */}
       <div className="pointer-events-none fixed inset-0 z-0 mesh-bg opacity-40" />
+      <FantasyBackground />
 
       {/* Header */}
       <section className="relative z-10 text-center">
